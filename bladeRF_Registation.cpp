@@ -1,0 +1,104 @@
+/*
+ * This file is part of the bladeRF project:
+ *   http://www.github.com/nuand/bladeRF
+ *
+ * Copyright (C) 2015 Josh Blum
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+#include <SoapySDR/Registry.hpp>
+#include "bladeRF_SoapySDR.hpp"
+#include <cstdio>
+#include <sstream>
+#include <cstdlib>
+#include <cstring>
+
+static SoapySDR::Kwargs devinfo_to_kwargs(const bladerf_devinfo &info)
+{
+    SoapySDR::Kwargs args;
+
+    args["backend"] = bladerf_backend_str(info.backend);
+
+    char deviceStr[100];
+    sprintf(deviceStr, "0x%02X:0x%02X", int(info.usb_bus), int(info.usb_addr));
+    args["device"] = deviceStr;
+
+    char instanceStr[100];
+    sprintf(instanceStr, "%u", info.instance);
+    args["instance"] = instanceStr;
+
+    args["serial"] = std::string(info.serial, BLADERF_SERIAL_LENGTH);
+    return args;
+}
+
+static bladerf_devinfo kwargs_to_devinfo(const SoapySDR::Kwargs &args)
+{
+    std::stringstream ss;
+
+    if (args.count("backend") != 0)
+    {
+        ss << args.at("backend") << ":";
+    }
+    else ss << "*:";
+
+    if (args.count("device") != 0)
+    {
+        ss << "device=" << args.at("device") << " ";
+    }
+
+    if (args.count("instance") != 0)
+    {
+        ss << "instance=" << args.at("instance") << " ";
+    }
+
+    if (args.count("serial") != 0)
+    {
+        ss << "serial=" << args.at("serial") << " ";
+    }
+
+    bladerf_devinfo info;
+    bladerf_init_devinfo(&info);
+    bladerf_get_devinfo_from_str(ss.str().c_str(), &info);
+    return info;
+}
+
+static std::vector<SoapySDR::Kwargs> find_bladeRF(const SoapySDR::Kwargs &matchArgs)
+{
+    const bladerf_devinfo matchinfo = kwargs_to_devinfo(matchArgs);
+
+    std::vector<SoapySDR::Kwargs> results;
+    bladerf_devinfo *infos = NULL;
+    int ret = 0;
+    ret = bladerf_get_device_list(&infos);
+
+    for (int i = 0; i < ret; i++)
+    {
+        if (bladerf_devinfo_matches(infos+i, &matchinfo))
+        {
+            results.push_back(devinfo_to_kwargs(infos[i]));
+        }
+    }
+
+    bladerf_free_device_list(infos);
+    return results;
+}
+
+static SoapySDR::Device *make_bladeRF(const SoapySDR::Kwargs &args)
+{
+    return new bladeRF_SoapySDR(kwargs_to_devinfo(args));
+}
+
+static SoapySDR::Registry register__bladeRF("bladerf", &find_bladeRF, &make_bladeRF, SOAPY_SDR_ABI_VERSION);
