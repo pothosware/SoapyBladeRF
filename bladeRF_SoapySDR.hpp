@@ -58,10 +58,6 @@ public:
      * Channels API
      ******************************************************************/
 
-    void setFrontendMapping(const int direction, const std::string &mapping);
-
-    std::string getFrontendMapping(const int direction) const;
-
     size_t getNumChannels(const int) const
     {
         return 1;
@@ -141,8 +137,6 @@ public:
      * Frequency API
      ******************************************************************/
 
-    void setFrequency(const int direction, const size_t channel, const double frequency, const SoapySDR::Kwargs &args = SoapySDR::Kwargs());
-
     void setFrequency(const int direction, const size_t channel, const std::string &name, const double frequency, const SoapySDR::Kwargs &args = SoapySDR::Kwargs());
 
     double getFrequency(const int direction, const size_t channel, const std::string &name) const;
@@ -169,7 +163,7 @@ public:
 
 private:
 
-    bladerf_module _dir2mod(const int direction)
+    static bladerf_module _dir2mod(const int direction)
     {
         return (direction == SOAPY_SDR_RX)?BLADERF_MODULE_RX:BLADERF_MODULE_TX;
     }

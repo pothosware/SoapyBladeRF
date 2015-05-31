@@ -21,6 +21,32 @@
 
 #include "bladeRF_SoapySDR.hpp"
 
+/*!
+ * Stream pointer and associated data
+ * This structure will be filled by setup stream,
+ * and passed to various Soapy SDR stream calls
+ * as the opaque pointer SoapySDR::Stream *stream.
+ */
+struct bladeRF_SoapySDR_stream_data
+{
+    struct bladerf_stream *stream;
+    bladerf_module module;
+};
+
+/*!
+ * Blade RF streamer callback for completed transfers.
+ */
+void bladeRF_SoapySDR_stream_cb(
+    bladerf *dev,
+    struct bladerf_stream *stream,
+    bladerf_metadata *meta,
+    void *samples,
+    size_t num_samples,
+    void *user_data)
+{
+    
+}
+
 SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     const int direction,
     const std::string &format,
@@ -46,7 +72,7 @@ int bladeRF_SoapySDR::activateStream(
     const long long timeNs,
     const size_t numElems)
 {
-    
+    //const int ret = bladerf_enable_module(_dev, (bladerf_module)stream, true);
 }
 
 int bladeRF_SoapySDR::deactivateStream(
@@ -54,7 +80,7 @@ int bladeRF_SoapySDR::deactivateStream(
     const int flags,
     const long long timeNs)
 {
-    
+    //const int ret = bladerf_enable_module(_dev, (bladerf_module)stream, false);
 }
 
 int bladeRF_SoapySDR::readStream(
