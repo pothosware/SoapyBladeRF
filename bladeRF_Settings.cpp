@@ -111,10 +111,10 @@ std::string bladeRF_SoapySDR::getAntenna(const int direction, const size_t chann
  * Gain API
  ******************************************************************/
 
-std::vector<std::string> bladeRF_SoapySDR::listGains(const int, const size_t) const
+std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t) const
 {
     std::vector<std::string> options;
-    //same for rx and tx
+    if (direction == SOAPY_SDR_RX) options.push_back("LNA");
     options.push_back("VGA1");
     options.push_back("VGA2");
     return options;
@@ -133,10 +133,16 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t, const double v
 void bladeRF_SoapySDR::setGain(const int direction, const size_t, const std::string &name, const double value)
 {
     int ret = 0;
-    if      (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_set_txvga1(_dev, int(value));
-    else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_set_txvga2(_dev, int(value));
+    if (direction == SOAPY_SDR_RX and name == "LNA")
+    {
+        if      (value < 1.5) ret = bladerf_set_lna_gain(_dev, BLADERF_LNA_GAIN_BYPASS);
+        else if (value < 4.5) ret = bladerf_set_lna_gain(_dev, BLADERF_LNA_GAIN_MID);
+        else                  ret = bladerf_set_lna_gain(_dev, BLADERF_LNA_GAIN_MAX);
+    }
     else if (direction == SOAPY_SDR_RX and name == "VGA1") ret = bladerf_set_rxvga1(_dev, int(value));
     else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_set_rxvga2(_dev, int(value));
+    else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_set_txvga1(_dev, int(value));
+    else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_set_txvga2(_dev, int(value));
     else throw std::runtime_error("setGain("+name+") -- unknown name");
     if (ret != 0)
     {
@@ -149,10 +155,22 @@ double bladeRF_SoapySDR::getGain(const int direction, const size_t, const std::s
 {
     int ret = 0;
     int gain = 0;
-    if      (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_get_txvga1(_dev, &gain);
-    else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_get_txvga2(_dev, &gain);
+    if (direction == SOAPY_SDR_RX and name == "LNA")
+    {
+        bladerf_lna_gain lnaGain;
+        ret = bladerf_get_lna_gain(_dev, &lnaGain);
+        switch (lnaGain)
+        {
+        case BLADERF_LNA_GAIN_UNKNOWN: gain = 0; break;
+        case BLADERF_LNA_GAIN_BYPASS: gain = 0; break;
+        case BLADERF_LNA_GAIN_MID: gain = 3; break;
+        case BLADERF_LNA_GAIN_MAX: gain = 6; break;
+        }
+    }
     else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_get_rxvga1(_dev, &gain);
     else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_get_rxvga2(_dev, &gain);
+    else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_get_txvga1(_dev, &gain);
+    else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_get_txvga2(_dev, &gain);
     else throw std::runtime_error("getGain("+name+") -- unknown name");
     if (ret != 0)
     {
@@ -164,10 +182,11 @@ double bladeRF_SoapySDR::getGain(const int direction, const size_t, const std::s
 
 SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t, const std::string &name) const
 {
-    if (direction == SOAPY_SDR_TX and name == "VGA1") return SoapySDR::Range(BLADERF_TXVGA1_GAIN_MIN, BLADERF_TXVGA1_GAIN_MAX);
-    if (direction == SOAPY_SDR_TX and name == "VGA2") return SoapySDR::Range(BLADERF_TXVGA2_GAIN_MIN, BLADERF_TXVGA2_GAIN_MAX);
+    if (direction == SOAPY_SDR_RX and name == "LNA")  return SoapySDR::Range(0, 6);
     if (direction == SOAPY_SDR_RX and name == "VGA1") return SoapySDR::Range(BLADERF_RXVGA1_GAIN_MIN, BLADERF_RXVGA1_GAIN_MAX);
     if (direction == SOAPY_SDR_RX and name == "VGA2") return SoapySDR::Range(BLADERF_RXVGA2_GAIN_MIN, BLADERF_RXVGA2_GAIN_MAX);
+    if (direction == SOAPY_SDR_TX and name == "VGA1") return SoapySDR::Range(BLADERF_TXVGA1_GAIN_MIN, BLADERF_TXVGA1_GAIN_MAX);
+    if (direction == SOAPY_SDR_TX and name == "VGA2") return SoapySDR::Range(BLADERF_TXVGA2_GAIN_MIN, BLADERF_TXVGA2_GAIN_MAX);
     else throw std::runtime_error("getGainRange("+name+") -- unknown name");
 }
 
@@ -223,24 +242,30 @@ SoapySDR::RangeList bladeRF_SoapySDR::getFrequencyRange(const int, const size_t,
 
 void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t, const double rate)
 {
-    int ret = bladerf_set_sample_rate(_dev, _dir2mod(direction), (unsigned int)(rate), NULL);
+    bladerf_rational_rate ratRate;
+    ratRate.integer = uint64_t(rate);
+    ratRate.den = uint64_t(1 << 14); //arbitrary denominator -- should be big enough
+    ratRate.num = uint64_t(rate - ratRate.integer) * ratRate.den;
+
+    int ret = bladerf_set_rational_sample_rate(_dev, _dir2mod(direction), &ratRate, NULL);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_sample_rate(%f) returned %d", rate, ret);
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_rational_sample_rate(%f) returned %d", rate, ret);
         throw std::runtime_error("setSampleRate()");
     }
 }
 
 double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t) const
 {
-    unsigned int rate = 0;
-    int ret = bladerf_get_sample_rate(_dev, _dir2mod(direction), &rate);
+    bladerf_rational_rate ratRate;
+    int ret = bladerf_get_rational_sample_rate(_dev, _dir2mod(direction), &ratRate);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_sample_rate() returned %d", ret);
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_rational_sample_rate() returned %d", ret);
         throw std::runtime_error("getSampleRate()");
     }
-    return rate;
+
+    return double(ratRate.integer) + (double(ratRate.num)/double(ratRate.den));
 }
 
 std::vector<double> bladeRF_SoapySDR::listSampleRates(const int, const size_t) const
