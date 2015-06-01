@@ -168,5 +168,7 @@ private:
         return (direction == SOAPY_SDR_RX)?BLADERF_MODULE_RX:BLADERF_MODULE_TX;
     }
 
+    std::map<int, size_t> _cachedBuffSizes;
+
     bladerf *_dev;
 };
