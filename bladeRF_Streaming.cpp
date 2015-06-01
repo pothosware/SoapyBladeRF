@@ -60,7 +60,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     if (numXfers > 32) numXfers = 32; //libusb limit
 
     //setup the stream for sync tx/rx calls
-    const int ret = bladerf_sync_config(
+    int ret = bladerf_sync_config(
         _dev,
         _dir2mod(direction),
         BLADERF_FORMAT_SC16_Q11_META,
@@ -71,8 +71,19 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_sync_config() returned %d", ret);
-        throw std::runtime_error("setupStream()");
+        throw std::runtime_error("setupStream() " + _err2str(ret));
     }
+
+    //activate the stream here -- only call once
+    ret = bladerf_enable_module(_dev, _dir2mod(direction), true);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(true) returned %d", ret);
+        throw std::runtime_error("setupStream() " + _err2str(ret));
+    }
+
+    if (direction == SOAPY_SDR_RX) _rxFloats = (format == "CF32");
+    if (direction == SOAPY_SDR_TX) _txFloats = (format == "CF32");
     _cachedBuffSizes[direction] = bufSize;
 
     return (SoapySDR::Stream *)(new int(direction));
@@ -80,6 +91,16 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
 
 void bladeRF_SoapySDR::closeStream(SoapySDR::Stream *stream)
 {
+    const int direction = *reinterpret_cast<int *>(stream);
+
+    //deactivate the stream here -- only call once
+    const int ret = bladerf_enable_module(_dev, _dir2mod(direction), false);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(false) returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("closeStream() " + _err2str(ret));
+    }
+
     delete reinterpret_cast<int *>(stream);
 }
 
@@ -92,50 +113,108 @@ size_t bladeRF_SoapySDR::getStreamMTU(SoapySDR::Stream *stream) const
 int bladeRF_SoapySDR::activateStream(
     SoapySDR::Stream *stream,
     const int flags,
-    const long long timeNs,
-    const size_t numElems)
+    const long long,
+    const size_t)
 {
-    const int direction = *reinterpret_cast<int *>(stream);
-    const int ret = bladerf_enable_module(_dev, _dir2mod(direction), true);
-    if (ret != 0)
-    {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(true) returned %d", ret);
-        throw std::runtime_error("activateStream()");
-    }
+    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
+
+    return 0;
 }
 
 int bladeRF_SoapySDR::deactivateStream(
     SoapySDR::Stream *stream,
     const int flags,
-    const long long timeNs)
+    const long long)
 {
-    const int direction = *reinterpret_cast<int *>(stream);
-    const int ret = bladerf_enable_module(_dev, _dir2mod(direction), false);
-    if (ret != 0)
-    {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(false) returned %d", ret);
-        throw std::runtime_error("deactivateStream()");
-    }
+    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
+
+    return 0;
 }
 
 int bladeRF_SoapySDR::readStream(
-    SoapySDR::Stream *stream,
+    SoapySDR::Stream *,
     void * const *buffs,
     const size_t numElems,
     int &flags,
     long long &timeNs,
     const long timeoutUs)
 {
-    
+    bladerf_metadata md;
+    md.timestamp = 0;
+    md.flags = BLADERF_META_FLAG_RX_NOW;
+    md.status = 0;
+
+    void *samples = (void *)buffs[0];
+    if (_rxFloats) samples = _rxConvBuff;
+
+    //recv the rx samples
+    int ret = bladerf_sync_rx(_dev, samples, numElems, &md, timeoutUs/1000);
+    if (ret == BLADERF_ERR_TIMEOUT) return SOAPY_SDR_TIMEOUT;
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_sync_rx() returned %s", _err2str(ret).c_str());
+        return SOAPY_SDR_STREAM_ERROR;
+    }
+
+    //perform the int16 to float conversion
+    if (_rxFloats)
+    {
+        float *output = (float *)buffs[0];
+        for (size_t i = 0; i < 2 * numElems; i++)
+        {
+            output[i] = float(_rxConvBuff[i])/2000;
+        }
+    }
+
+    uint64_t value = 0;
+    ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &value);
+    printf("timestamp %llu\n", value);
+    printf("metadata %llu\n", md.timestamp);
+
+    //TODO metadata
+
+    return numElems;
 }
 
 int bladeRF_SoapySDR::writeStream(
-    SoapySDR::Stream *stream,
+    SoapySDR::Stream *,
     const void * const *buffs,
     const size_t numElems,
     int &flags,
     const long long timeNs,
     const long timeoutUs)
 {
-    
+    bladerf_metadata md;
+    md.timestamp = 0;
+    md.flags = 0;
+    md.status = 0;
+
+    if ((flags & SOAPY_SDR_HAS_TIME) != 0)
+    {
+        //md.timestamp = //TODO
+    }
+
+    void *samples = (void *)buffs[0];
+    if (_txFloats) samples = _txConvBuff;
+
+    //perform the float to int16 conversion
+    if (_txFloats)
+    {
+        float *input = (float *)samples;
+        for (size_t i = 0; i < 2 * numElems; i++)
+        {
+            _txConvBuff[i] = int16_t(input[i]*2000);
+        }
+    }
+
+    //send the tx samples
+    int ret = bladerf_sync_tx(_dev, samples, numElems, &md, timeoutUs/1000);
+    if (ret == BLADERF_ERR_TIMEOUT) return SOAPY_SDR_TIMEOUT;
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_sync_tx() returned %d", ret);
+        return SOAPY_SDR_STREAM_ERROR;
+    }
+
+    return numElems;
 }

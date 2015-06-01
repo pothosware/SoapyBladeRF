@@ -23,6 +23,7 @@
 
 #include <SoapySDR/Device.hpp>
 #include <libbladeRF.h>
+#include <cstdio>
 
 /*!
  * The SoapySDR device interface for a blade RF.
@@ -161,6 +162,22 @@ public:
 
     std::vector<double> listBandwidths(const int direction, const size_t channel) const;
 
+    /*******************************************************************
+     * Time API
+     ******************************************************************/
+
+    bool hasHardwareTime(const std::string &what = "") const;
+
+    long long getHardwareTime(const std::string &what = "") const;
+
+    /*******************************************************************
+     * Register API
+     ******************************************************************/
+
+    void writeRegister(const unsigned addr, const unsigned value);
+
+    unsigned readRegister(const unsigned addr) const;
+
 private:
 
     static bladerf_module _dir2mod(const int direction)
@@ -168,7 +185,37 @@ private:
         return (direction == SOAPY_SDR_RX)?BLADERF_MODULE_RX:BLADERF_MODULE_TX;
     }
 
+    static std::string _err2str(const int err)
+    {
+        const char *msg = NULL;
+        switch (err)
+        {
+        case BLADERF_ERR_UNEXPECTED: msg = "An unexpected failure occurred"; break;
+        case BLADERF_ERR_RANGE: msg = "Provided parameter is out of range"; break;
+        case BLADERF_ERR_INVAL: msg = "Invalid operation/parameter"; break;
+        case BLADERF_ERR_MEM: msg = "Memory allocation error"; break;
+        case BLADERF_ERR_IO: msg = "File/Device I/O error"; break;
+        case BLADERF_ERR_TIMEOUT: msg = "Operation timed out"; break;
+        case BLADERF_ERR_NODEV: msg = "No device(s) available"; break;
+        case BLADERF_ERR_UNSUPPORTED: msg = "Operation not supported"; break;
+        case BLADERF_ERR_MISALIGNED: msg = "Misaligned flash access"; break;
+        case BLADERF_ERR_CHECKSUM: msg = "Invalid checksum"; break;
+        case BLADERF_ERR_NO_FILE: msg = "File not found"; break;
+        case BLADERF_ERR_UPDATE_FPGA: msg = "An FPGA update is required"; break;
+        case BLADERF_ERR_UPDATE_FW: msg = "A firmware update is requied"; break;
+        case BLADERF_ERR_TIME_PAST: msg = "Requested timestamp is in the past"; break;
+        default: msg = "Unknown error code"; break;
+        }
+        char buff[256];
+        sprintf(buff, "%d - %s", err, msg);
+        return buff;
+    }
+
     std::map<int, size_t> _cachedBuffSizes;
+    double _rxSampRate, _txSampRate;
+    bool _rxFloats, _txFloats;
+    uint16_t _rxConvBuff[4096];
+    uint16_t _txConvBuff[4096];
 
     bladerf *_dev;
 };
