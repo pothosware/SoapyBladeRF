@@ -24,6 +24,17 @@
 #include <SoapySDR/Device.hpp>
 #include <libbladeRF.h>
 #include <cstdio>
+#include <queue>
+
+/*!
+ * Storage to stash stream cmds for rx
+ */
+struct rxStreamCmd
+{
+    int flags;
+    long long timeNs;
+    size_t numElems;
+};
 
 /*!
  * The SoapySDR device interface for a blade RF.
@@ -109,6 +120,8 @@ public:
         int &flags,
         const long long timeNs = 0,
         const long timeoutUs = 100000);
+
+    void sendTxEndBurst(void);
 
     /*******************************************************************
      * Antenna API
@@ -213,9 +226,11 @@ private:
 
     std::map<int, size_t> _cachedBuffSizes;
     double _rxSampRate, _txSampRate;
+    bool _inTxBurst;
     bool _rxFloats, _txFloats;
     uint16_t _rxConvBuff[4096];
     uint16_t _txConvBuff[4096];
+    std::queue<rxStreamCmd> _rxCmds;
 
     bladerf *_dev;
 };

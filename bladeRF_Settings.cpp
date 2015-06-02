@@ -30,6 +30,11 @@
  ******************************************************************/
 
 bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
+    _rxSampRate(1.0),
+    _txSampRate(1.0),
+    _inTxBurst(false),
+    _rxFloats(false),
+    _txFloats(false),
     _dev(NULL)
 {
     bladerf_devinfo info = devinfo;
@@ -261,7 +266,12 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
         throw std::runtime_error("setSampleRate() " + _err2str(ret));
     }
 
-    SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%f MHz), actual = %f MHz", rate/1e6, this->getSampleRate(direction, channel)/1e6);
+    //stash the actual rate
+    const double actual = this->getSampleRate(direction, channel);
+    if (direction == SOAPY_SDR_RX) _rxSampRate = actual;
+    if (direction == SOAPY_SDR_TX) _txSampRate = actual;
+
+    SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%f MHz), actual = %f MHz", rate/1e6, actual/1e6);
 }
 
 double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t) const
