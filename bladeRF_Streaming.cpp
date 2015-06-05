@@ -82,8 +82,18 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
         throw std::runtime_error("setupStream() " + _err2str(ret));
     }
 
-    if (direction == SOAPY_SDR_RX) _rxFloats = (format == "CF32");
-    if (direction == SOAPY_SDR_TX) _txFloats = (format == "CF32");
+    if (direction == SOAPY_SDR_RX)
+    {
+        _rxOverflow = false;
+        _rxFloats = (format == "CF32");
+    }
+
+    if (direction == SOAPY_SDR_TX)
+    {
+        _txUnderflow = false;
+        _txFloats = (format == "CF32");
+    }
+
     _cachedBuffSizes[direction] = bufSize;
 
     return (SoapySDR::Stream *)(new int(direction));
@@ -171,6 +181,19 @@ int bladeRF_SoapySDR::readStream(
     if (_rxCmds.empty()) return SOAPY_SDR_TIMEOUT;
     rxStreamCmd cmd = _rxCmds.front();
 
+    //clear output metadata
+    flags = 0;
+    timeNs = 0;
+
+    //return overflow status indicator
+    if (_rxOverflow)
+    {
+        _rxOverflow = false;
+        flags |= SOAPY_SDR_HAS_TIME;
+        timeNs = _rxNextTicks*(1e9/_rxSampRate);
+        return SOAPY_SDR_OVERFLOW;
+    }
+
     //initialize metadata
     bladerf_metadata md;
     md.timestamp = 0;
@@ -212,16 +235,21 @@ int bladeRF_SoapySDR::readStream(
     flags |= SOAPY_SDR_HAS_TIME;
     timeNs = md.timestamp*(1e9/_rxSampRate);
 
-    //TODO status
-    //if ((md.status & BLADERF_META_STATUS_OVERRUN) != 0) flags |= 
+    //parse the status
+    if ((md.status & BLADERF_META_STATUS_OVERRUN) != 0)
+    {
+        SoapySDR::log(SOAPY_SDR_SSI, "0");
+        _rxNextTicks = md.timestamp + md.actual_count;
+        _rxOverflow = true;
+    }
 
     //consume from the command if this is a finite burst
     if (cmd.numElems > 0)
     {
-        cmd.numElems -= numElems;
+        cmd.numElems -= md.actual_count;
         if (cmd.numElems == 0) _rxCmds.pop();
     }
-    return numElems;
+    return md.actual_count;
 }
 
 int bladeRF_SoapySDR::writeStream(
@@ -277,7 +305,12 @@ int bladeRF_SoapySDR::writeStream(
     //end the burst if specified
     if ((flags & SOAPY_SDR_END_BURST) != 0) this->sendTxEndBurst();
 
-    //TODO status
+    //parse the status
+    if ((md.status & BLADERF_META_STATUS_UNDERRUN) != 0)
+    {
+        SoapySDR::log(SOAPY_SDR_SSI, "U");
+        _txUnderflow = true;
+    }
 
     return numElems;
 }
@@ -308,4 +341,24 @@ void bladeRF_SoapySDR::sendTxEndBurst(void)
     }
 
     _inTxBurst = false;
+}
+
+int bladeRF_SoapySDR::readStreamStatus(
+    SoapySDR::Stream *,
+    size_t &,
+    int &flags,
+    long long &timeNs,
+    const long
+)
+{
+    flags = 0;
+    timeNs = 0;
+
+    if (_txUnderflow)
+    {
+        _txUnderflow = false;
+        return SOAPY_SDR_UNDERFLOW;
+    }
+
+    return 0;
 }

@@ -35,6 +35,9 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _inTxBurst(false),
     _rxFloats(false),
     _txFloats(false),
+    _rxOverflow(false),
+    _txUnderflow(false),
+    _rxNextTicks(0),
     _dev(NULL)
 {
     bladerf_devinfo info = devinfo;
@@ -356,8 +359,8 @@ bool bladeRF_SoapySDR::hasHardwareTime(const std::string &what) const
 
 long long bladeRF_SoapySDR::getHardwareTime(const std::string &what) const
 {
-    uint64_t value = 0;
-    const int ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &value);
+    //uint64_t value = 0;
+    //const int ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &value);
 
     //convert to ns?
     return 0;

@@ -121,6 +121,14 @@ public:
         const long long timeNs = 0,
         const long timeoutUs = 100000);
 
+    int readStreamStatus(
+        SoapySDR::Stream *stream,
+        size_t &chanMask,
+        int &flags,
+        long long &timeNs,
+        const long timeoutUs
+    );
+
     void sendTxEndBurst(void);
 
     /*******************************************************************
@@ -228,6 +236,8 @@ private:
     double _rxSampRate, _txSampRate;
     bool _inTxBurst;
     bool _rxFloats, _txFloats;
+    bool _rxOverflow, _txUnderflow;
+    long long _rxNextTicks;
     uint16_t _rxConvBuff[4096];
     uint16_t _txConvBuff[4096];
     std::queue<rxStreamCmd> _rxCmds;
