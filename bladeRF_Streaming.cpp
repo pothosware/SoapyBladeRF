@@ -190,7 +190,7 @@ int bladeRF_SoapySDR::readStream(
     {
         _rxOverflow = false;
         flags |= SOAPY_SDR_HAS_TIME;
-        timeNs = _rxNextTicks*(1e9/_rxSampRate);
+        timeNs = _rxTicksToTimeNs(_rxNextTicks);
         return SOAPY_SDR_OVERFLOW;
     }
 
@@ -202,7 +202,7 @@ int bladeRF_SoapySDR::readStream(
 
     //without a soapy sdr time flag, set the blade rf now flag
     if ((cmd.flags & SOAPY_SDR_HAS_TIME) == 0) md.flags |= BLADERF_META_FLAG_RX_NOW;
-    md.timestamp = cmd.timeNs*(_rxSampRate/1e9);
+    md.timestamp = _timeNsToRxTicks(cmd.timeNs);
     if (cmd.numElems > 0) numElems = std::min(cmd.numElems, numElems);
     cmd.flags = 0; //clear flags for subsequent calls
 
@@ -233,7 +233,7 @@ int bladeRF_SoapySDR::readStream(
 
     //unpack the metadata
     flags |= SOAPY_SDR_HAS_TIME;
-    timeNs = md.timestamp*(1e9/_rxSampRate);
+    timeNs = _rxTicksToTimeNs(md.timestamp);
 
     //parse the status
     if ((md.status & BLADERF_META_STATUS_OVERRUN) != 0)
@@ -269,7 +269,7 @@ int bladeRF_SoapySDR::writeStream(
     //pack the metadata
     if ((flags & SOAPY_SDR_HAS_TIME) != 0)
     {
-        md.timestamp = timeNs*(_txSampRate/1e9);
+        md.timestamp = _timeNsToTxTicks(timeNs);
     }
     else md.flags |= BLADERF_META_FLAG_TX_NOW;
 

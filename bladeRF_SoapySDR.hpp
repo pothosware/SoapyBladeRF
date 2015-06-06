@@ -232,6 +232,21 @@ private:
         return buff;
     }
 
+    long long _rxTicksToTimeNs(const long long ticks) const
+    {
+        return ticks*(1e9/_rxSampRate);
+    }
+
+    long long _timeNsToRxTicks(const long long timeNs) const
+    {
+        return timeNs*(_rxSampRate/1e9);
+    }
+
+    long long _timeNsToTxTicks(const long long timeNs) const
+    {
+        return timeNs*(_txSampRate/1e9);
+    }
+
     std::map<int, size_t> _cachedBuffSizes;
     double _rxSampRate, _txSampRate;
     bool _inTxBurst;
