@@ -213,6 +213,7 @@ int bladeRF_SoapySDR::readStream(
     //recv the rx samples
     int ret = bladerf_sync_rx(_dev, samples, numElems, &md, timeoutUs/1000);
     if (ret == BLADERF_ERR_TIMEOUT) return SOAPY_SDR_TIMEOUT;
+    if (ret == BLADERF_ERR_TIME_PAST) return SOAPY_SDR_TIME_ERROR;
     if (ret != 0)
     {
         //any error when this is a finite burst causes the command to be removed
@@ -293,6 +294,7 @@ int bladeRF_SoapySDR::writeStream(
     //send the tx samples
     int ret = bladerf_sync_tx(_dev, samples, numElems, &md, timeoutUs/1000);
     if (ret == BLADERF_ERR_TIMEOUT) return SOAPY_SDR_TIMEOUT;
+    if (ret == BLADERF_ERR_TIME_PAST) return SOAPY_SDR_TIME_ERROR;
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_sync_tx() returned %d", ret);
