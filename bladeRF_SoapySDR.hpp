@@ -191,6 +191,8 @@ public:
 
     long long getHardwareTime(const std::string &what = "") const;
 
+    void setHardwareTime(const long long timeNs, const std::string &what = "");
+
     /*******************************************************************
      * Register API
      ******************************************************************/
@@ -234,16 +236,18 @@ private:
 
     long long _rxTicksToTimeNs(const long long ticks) const
     {
-        return ticks*(1e9/_rxSampRate);
+        const long long timeNs = ticks*(1e9/_rxSampRate);
+        return timeNs + _rxTimeNsOffset;
     }
 
     long long _timeNsToRxTicks(const long long timeNs) const
     {
-        return timeNs*(_rxSampRate/1e9);
+        return (timeNs-_rxTimeNsOffset)*(_rxSampRate/1e9);
     }
 
     long long _timeNsToTxTicks(const long long timeNs) const
     {
+        //TODO offset -- how to know
         return timeNs*(_txSampRate/1e9);
     }
 
@@ -253,6 +257,7 @@ private:
     bool _rxFloats, _txFloats;
     bool _rxOverflow, _txUnderflow;
     long long _rxNextTicks;
+    long long _rxTimeNsOffset;
     uint16_t _rxConvBuff[4096];
     uint16_t _txConvBuff[4096];
     std::queue<rxStreamCmd> _rxCmds;
