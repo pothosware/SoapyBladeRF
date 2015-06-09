@@ -27,13 +27,14 @@
 #include <queue>
 
 /*!
- * Storage to stash stream cmds for rx
+ * Storage for rx commands and tx responses
  */
-struct rxStreamCmd
+struct StreamMetadata
 {
     int flags;
     long long timeNs;
     size_t numElems;
+    int code;
 };
 
 /*!
@@ -245,22 +246,31 @@ private:
         return (timeNs-_rxTimeNsOffset)*(_rxSampRate/1e9);
     }
 
+    long long _txTicksToTimeNs(const long long ticks) const
+    {
+        const long long timeNs = ticks*(1e9/_txSampRate);
+        return timeNs + _txTimeNsOffset;
+    }
+
     long long _timeNsToTxTicks(const long long timeNs) const
     {
-        //TODO offset -- how to know
-        return timeNs*(_txSampRate/1e9);
+        return (timeNs-_txTimeNsOffset)*(_txSampRate/1e9);
     }
 
     std::map<int, size_t> _cachedBuffSizes;
-    double _rxSampRate, _txSampRate;
+    double _rxSampRate;
+    double _txSampRate;
     bool _inTxBurst;
-    bool _rxFloats, _txFloats;
-    bool _rxOverflow, _txUnderflow;
+    bool _rxFloats;
+    bool _txFloats;
+    bool _rxOverflow;
     long long _rxNextTicks;
     long long _rxTimeNsOffset;
-    uint16_t _rxConvBuff[4096];
-    uint16_t _txConvBuff[4096];
-    std::queue<rxStreamCmd> _rxCmds;
+    long long _txTimeNsOffset;
+    uint16_t _rxConvBuff[1024*16];
+    uint16_t _txConvBuff[1024*16];
+    std::queue<StreamMetadata> _rxCmds;
+    std::queue<StreamMetadata> _txResps;
 
     bladerf *_dev;
 };

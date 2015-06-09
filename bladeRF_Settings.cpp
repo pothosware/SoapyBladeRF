@@ -36,9 +36,9 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _rxFloats(false),
     _txFloats(false),
     _rxOverflow(false),
-    _txUnderflow(false),
     _rxNextTicks(0),
     _rxTimeNsOffset(0),
+    _txTimeNsOffset(0),
     _dev(NULL)
 {
     bladerf_devinfo info = devinfo;
@@ -379,8 +379,7 @@ void bladeRF_SoapySDR::setHardwareTime(const long long timeNs, const std::string
     if (not what.empty()) return SoapySDR::Device::setHardwareTime(timeNs, what);
 
     uint64_t ticksNow = 0;
-    const int ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &ticksNow);
-
+    int ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &ticksNow);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_timestamp() returned %s", _err2str(ret).c_str());
@@ -388,6 +387,15 @@ void bladeRF_SoapySDR::setHardwareTime(const long long timeNs, const std::string
     }
 
     _rxTimeNsOffset += timeNs - _rxTicksToTimeNs(ticksNow);
+
+    ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_TX, &ticksNow);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_timestamp() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("setHardwareTime() " + _err2str(ret));
+    }
+
+    _txTimeNsOffset += timeNs - _txTicksToTimeNs(ticksNow);
 }
 
 /*******************************************************************
