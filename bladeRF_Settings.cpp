@@ -37,6 +37,7 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _txFloats(false),
     _rxOverflow(false),
     _rxNextTicks(0),
+    _txNextTicks(0),
     _rxTimeNsOffset(0),
     _txTimeNsOffset(0),
     _dev(NULL)
@@ -54,6 +55,10 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     char serialStr[BLADERF_SERIAL_LENGTH];
     ret = bladerf_get_serial(_dev, serialStr);
     if (ret == 0) SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_get_serial() = %s", serialStr);
+
+    //initialize the sample rates to something
+    this->setSampleRate(SOAPY_SDR_RX, 0, 1e6);
+    this->setSampleRate(SOAPY_SDR_TX, 0, 1e6);
 }
 
 bladeRF_SoapySDR::~bladeRF_SoapySDR(void)

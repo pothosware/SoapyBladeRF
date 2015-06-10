@@ -265,6 +265,7 @@ private:
     bool _txFloats;
     bool _rxOverflow;
     long long _rxNextTicks;
+    long long _txNextTicks;
     long long _rxTimeNsOffset;
     long long _txTimeNsOffset;
     uint16_t _rxConvBuff[1024*16];

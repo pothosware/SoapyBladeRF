@@ -23,6 +23,14 @@
 #include <SoapySDR/Logger.hpp>
 #include <stdexcept>
 
+//cross platform usleep()
+#ifdef _MSC_VER
+#include <windows.h>
+#define usleep(t) Sleep((t)/1000)
+#else
+#include <unistd.h>
+#endif
+
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
 
@@ -245,7 +253,6 @@ int bladeRF_SoapySDR::readStream(
     if ((md.status & BLADERF_META_STATUS_OVERRUN) != 0)
     {
         SoapySDR::log(SOAPY_SDR_SSI, "0");
-        _rxNextTicks = md.timestamp + md.actual_count;
         _rxOverflow = true;
     }
 
@@ -255,6 +262,8 @@ int bladeRF_SoapySDR::readStream(
         cmd.numElems -= md.actual_count;
         if (cmd.numElems == 0) _rxCmds.pop();
     }
+
+    _rxNextTicks = md.timestamp + md.actual_count;
     return md.actual_count;
 }
 
@@ -280,7 +289,12 @@ int bladeRF_SoapySDR::writeStream(
         {
             md.timestamp = _timeNsToTxTicks(timeNs);
         }
-        else md.flags |= BLADERF_META_FLAG_TX_NOW;
+        else
+        {
+            md.flags |= BLADERF_META_FLAG_TX_NOW;
+            bladerf_get_timestamp(_dev, BLADERF_MODULE_TX, &md.timestamp);
+        }
+        _txNextTicks = md.timestamp;
     }
 
     //prepare buffers
@@ -306,6 +320,7 @@ int bladeRF_SoapySDR::writeStream(
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_sync_tx() returned %s", _err2str(ret).c_str());
         return SOAPY_SDR_STREAM_ERROR;
     }
+    _txNextTicks += numElems;
 
     //always in a burst after successful tx
     _inTxBurst = true;
@@ -353,7 +368,8 @@ void bladeRF_SoapySDR::sendTxEndBurst(void)
 
     //status
     StreamMetadata resp;
-    resp.flags = SOAPY_SDR_END_BURST;
+    resp.flags = SOAPY_SDR_END_BURST | SOAPY_SDR_HAS_TIME;
+    resp.timeNs = this->_txTicksToTimeNs(_txNextTicks);
     resp.code = 0;
     _txResps.push(resp);
 
@@ -365,9 +381,34 @@ int bladeRF_SoapySDR::readStreamStatus(
     size_t &,
     int &flags,
     long long &timeNs,
-    const long
+    const long timeoutUs
 )
 {
+    //wait for an event to be ready considering the timeout and time
+    //this is an emulation by polling and waiting on the hardware time
+    long long timeNowNs = this->getHardwareTime();
+    const long long exitTimeNs = timeNowNs + (timeoutUs*1000);
+    while (true)
+    {
+        //no status to report, sleep for a bit
+        if (_txResps.empty()) goto pollSleep;
+
+        //no time on the current status, done waiting...
+        if ((_txResps.front().flags & SOAPY_SDR_HAS_TIME) == 0) break;
+
+        //current status time expired, done waiting...
+        if (_txResps.front().timeNs < timeNowNs) break;
+
+        //check for timeout expired
+        timeNowNs = this->getHardwareTime();
+        if (exitTimeNs < timeNowNs) return SOAPY_SDR_TIMEOUT;
+
+        //sleep a bit, never more than time remaining
+        pollSleep:
+        usleep(std::min<long>(1000, (exitTimeNs-timeNowNs)/1000));
+    }
+
+    //extract the most recent status event
     if (_txResps.empty()) return SOAPY_SDR_TIMEOUT;
     StreamMetadata resp = _txResps.front();
     _txResps.pop();
