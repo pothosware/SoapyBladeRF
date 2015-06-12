@@ -238,23 +238,23 @@ private:
     long long _rxTicksToTimeNs(const long long ticks) const
     {
         const long long timeNs = ticks*(1e9/_rxSampRate);
-        return timeNs + _rxTimeNsOffset;
+        return timeNs + _timeNsOffset;
     }
 
     long long _timeNsToRxTicks(const long long timeNs) const
     {
-        return (timeNs-_rxTimeNsOffset)*(_rxSampRate/1e9);
+        return (timeNs-_timeNsOffset)*(_rxSampRate/1e9);
     }
 
     long long _txTicksToTimeNs(const long long ticks) const
     {
         const long long timeNs = ticks*(1e9/_txSampRate);
-        return timeNs + _txTimeNsOffset;
+        return timeNs + _timeNsOffset;
     }
 
     long long _timeNsToTxTicks(const long long timeNs) const
     {
-        return (timeNs-_txTimeNsOffset)*(_txSampRate/1e9);
+        return (timeNs-_timeNsOffset)*(_txSampRate/1e9);
     }
 
     std::map<int, size_t> _cachedBuffSizes;
@@ -266,8 +266,7 @@ private:
     bool _rxOverflow;
     long long _rxNextTicks;
     long long _txNextTicks;
-    long long _rxTimeNsOffset;
-    long long _txTimeNsOffset;
+    long long _timeNsOffset;
     uint16_t _rxConvBuff[1024*16];
     uint16_t _txConvBuff[1024*16];
     std::queue<StreamMetadata> _rxCmds;

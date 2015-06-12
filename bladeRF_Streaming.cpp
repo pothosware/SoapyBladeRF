@@ -67,9 +67,6 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     if (numXfers > numBuffs) numXfers = numBuffs; //cant have more than available buffers
     if (numXfers > 32) numXfers = 32; //libusb limit
 
-    //stash the approximate hardware time so it can be restored
-    const long long timeNow = this->getHardwareTime();
-
     //setup the stream for sync tx/rx calls
     int ret = bladerf_sync_config(
         _dev,
@@ -105,9 +102,6 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     }
 
     _cachedBuffSizes[direction] = bufSize;
-
-    //restore the previous hardware time setting
-    this->setHardwareTime(timeNow);
 
     return (SoapySDR::Stream *)(new int(direction));
 }

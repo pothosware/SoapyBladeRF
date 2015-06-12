@@ -38,8 +38,7 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _rxOverflow(false),
     _rxNextTicks(0),
     _txNextTicks(0),
-    _rxTimeNsOffset(0),
-    _txTimeNsOffset(0),
+    _timeNsOffset(0),
     _dev(NULL)
 {
     bladerf_devinfo info = devinfo;
@@ -268,6 +267,9 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
     ratRate.den = uint64_t(1 << 14); //arbitrary denominator -- should be big enough
     ratRate.num = uint64_t(rate - ratRate.integer) * ratRate.den;
 
+    //stash the approximate hardware time so it can be restored
+    const long long timeNow = this->getHardwareTime();
+
     int ret = bladerf_set_rational_sample_rate(_dev, _dir2mod(direction), &ratRate, NULL);
     if (ret != 0)
     {
@@ -280,7 +282,10 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
     if (direction == SOAPY_SDR_RX) _rxSampRate = actual;
     if (direction == SOAPY_SDR_TX) _txSampRate = actual;
 
-    SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%f MHz), actual = %f MHz", rate/1e6, actual/1e6);
+    //restore the previous hardware time setting (after rate stash)
+    this->setHardwareTime(timeNow);
+
+    SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%d, %f MHz), actual = %f MHz", direction, rate/1e6, actual/1e6);
 }
 
 double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t) const
@@ -383,24 +388,23 @@ void bladeRF_SoapySDR::setHardwareTime(const long long timeNs, const std::string
 {
     if (not what.empty()) return SoapySDR::Device::setHardwareTime(timeNs, what);
 
-    uint64_t ticksNow = 0;
-    int ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &ticksNow);
+    //reset the counters with GPIO and stash the offset
+    //this is the same as setting the time because
+    //we maintain the offset math within the driver
+
+    int ret = 0;
+    uint32_t original = 0;
+    ret |= bladerf_config_gpio_read(_dev, &original);
+    ret |= bladerf_config_gpio_write(_dev, original & ~(BLADERF_GPIO_TIMESTAMP));
+    ret |= bladerf_config_gpio_write(_dev, original | BLADERF_GPIO_TIMESTAMP);
+
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_timestamp() returned %s", _err2str(ret).c_str());
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_config_gpio_read/write() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("setHardwareTime() " + _err2str(ret));
     }
 
-    _rxTimeNsOffset += timeNs - _rxTicksToTimeNs(ticksNow);
-
-    ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_TX, &ticksNow);
-    if (ret != 0)
-    {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_timestamp() returned %s", _err2str(ret).c_str());
-        throw std::runtime_error("setHardwareTime() " + _err2str(ret));
-    }
-
-    _txTimeNsOffset += timeNs - _txTicksToTimeNs(ticksNow);
+    _timeNsOffset = timeNs;
 }
 
 /*******************************************************************
