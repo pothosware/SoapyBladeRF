@@ -233,7 +233,7 @@ int bladeRF_SoapySDR::readStream(
     if (_rxFloats)
     {
         float *output = (float *)buffs[0];
-        for (size_t i = 0; i < 2 * numElems; i++)
+        for (size_t i = 0; i < 2 * md.actual_count; i++)
         {
             output[i] = float(_rxConvBuff[i])/2000;
         }
