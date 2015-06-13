@@ -298,7 +298,7 @@ int bladeRF_SoapySDR::writeStream(
     //perform the float to int16 conversion
     if (_txFloats)
     {
-        float *input = (float *)samples;
+        float *input = (float *)buffs[0];
         for (size_t i = 0; i < 2 * numElems; i++)
         {
             _txConvBuff[i] = int16_t(input[i]*2000);
@@ -358,6 +358,7 @@ void bladeRF_SoapySDR::sendTxEndBurst(void)
         {
             SoapySDR::logf(SOAPY_SDR_ERROR, "sendTxEndBurst::bladerf_sync_tx() returned %s", _err2str(ret).c_str());
         }
+        break;
     }
 
     //status
