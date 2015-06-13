@@ -53,7 +53,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
 
     //determine the number of buffers to allocate
     int numBuffs = (args.count("buffers") == 0)? 0 : atoi(args.at("buffers").c_str());
-    if (numBuffs == 0) numBuffs = DEF_BUFF_LEN;
+    if (numBuffs == 0) numBuffs = DEF_NUM_BUFFS;
     if (numBuffs == 1) numBuffs++;
 
     //determine the size of each buffer in samples
