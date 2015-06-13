@@ -314,6 +314,15 @@ std::vector<double> bladeRF_SoapySDR::listSampleRates(const int, const size_t) c
 
 void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t, const double bw)
 {
+    //bypass the filter when sufficiently large BW is selected
+    if (bw > BLADERF_BANDWIDTH_MAX)
+    {
+        bladerf_set_lpf_mode(_dev, _dir2mod(direction), BLADERF_LPF_BYPASSED);
+        return;
+    }
+
+    //otherwise set to normal and configure the filter bandwidth
+    bladerf_set_lpf_mode(_dev, _dir2mod(direction), BLADERF_LPF_NORMAL);
     int ret = bladerf_set_bandwidth(_dev, _dir2mod(direction), (unsigned int)(bw), NULL);
     if (ret != 0)
     {
