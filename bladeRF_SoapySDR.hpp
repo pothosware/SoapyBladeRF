@@ -267,8 +267,8 @@ private:
     long long _rxNextTicks;
     long long _txNextTicks;
     long long _timeNsOffset;
-    uint16_t _rxConvBuff[1024*16];
-    uint16_t _txConvBuff[1024*16];
+    int16_t _rxConvBuff[1024*16];
+    int16_t _txConvBuff[1024*16];
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;
 
