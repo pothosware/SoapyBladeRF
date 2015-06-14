@@ -235,7 +235,7 @@ int bladeRF_SoapySDR::readStream(
         float *output = (float *)buffs[0];
         for (size_t i = 0; i < 2 * md.actual_count; i++)
         {
-            output[i] = float(_rxConvBuff[i])/2000;
+            output[i] = float(_rxConvBuff[i])/2048;
         }
     }
 
@@ -301,7 +301,7 @@ int bladeRF_SoapySDR::writeStream(
         float *input = (float *)buffs[0];
         for (size_t i = 0; i < 2 * numElems; i++)
         {
-            _txConvBuff[i] = int16_t(input[i]*2000);
+            _txConvBuff[i] = int16_t(input[i]*2048);
         }
     }
 
