@@ -22,6 +22,7 @@
 #pragma once
 
 #include <SoapySDR/Device.hpp>
+#include <SoapySDR/Time.hpp>
 #include <libbladeRF.h>
 #include <cstdio>
 #include <queue>
@@ -237,24 +238,22 @@ private:
 
     long long _rxTicksToTimeNs(const long long ticks) const
     {
-        const long long timeNs = ticks*(1e9/_rxSampRate);
-        return timeNs + _timeNsOffset;
+        return SoapySDR::ticksToTimeNs(ticks, _rxSampRate) + _timeNsOffset;
     }
 
     long long _timeNsToRxTicks(const long long timeNs) const
     {
-        return (timeNs-_timeNsOffset)*(_rxSampRate/1e9);
+        return SoapySDR::timeNsToTicks(timeNs-_timeNsOffset, _rxSampRate);
     }
 
     long long _txTicksToTimeNs(const long long ticks) const
     {
-        const long long timeNs = ticks*(1e9/_txSampRate);
-        return timeNs + _timeNsOffset;
+        return SoapySDR::ticksToTimeNs(ticks, _txSampRate) + _timeNsOffset;
     }
 
     long long _timeNsToTxTicks(const long long timeNs) const
     {
-        return (timeNs-_timeNsOffset)*(_txSampRate/1e9);
+        return SoapySDR::timeNsToTicks(timeNs-_timeNsOffset, _txSampRate);
     }
 
     std::map<int, size_t> _cachedBuffSizes;
