@@ -23,7 +23,6 @@
 #include <SoapySDR/Logger.hpp>
 #include <stdexcept>
 #include <cstdio>
-#include <unistd.h>
 
 /*******************************************************************
  * Device init/shutdown
