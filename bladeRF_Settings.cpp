@@ -215,6 +215,7 @@ SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t
 
 void bladeRF_SoapySDR::setFrequency(const int direction, const size_t, const std::string &name, const double frequency, const SoapySDR::Kwargs &)
 {
+    if (name == "BB") return; //for compatibility
     if (name != "RF") throw std::runtime_error("setFrequency("+name+") unknown name");
 
     int ret = bladerf_set_frequency(_dev, _dir2mod(direction), (unsigned int)(frequency));
@@ -227,6 +228,7 @@ void bladeRF_SoapySDR::setFrequency(const int direction, const size_t, const std
 
 double bladeRF_SoapySDR::getFrequency(const int direction, const size_t, const std::string &name) const
 {
+    if (name == "BB") return 0.0; //for compatibility
     if (name != "RF") throw std::runtime_error("getFrequency("+name+") unknown name");
 
     unsigned int freq = 0;
@@ -248,6 +250,7 @@ std::vector<std::string> bladeRF_SoapySDR::listFrequencies(const int, const size
 
 SoapySDR::RangeList bladeRF_SoapySDR::getFrequencyRange(const int, const size_t, const std::string &name) const
 {
+    if (name == "BB") return SoapySDR::RangeList(1, SoapySDR::Range(0.0, 0.0)); //for compatibility
     if (name != "RF") throw std::runtime_error("getFrequencyRange("+name+") unknown name");
 
     const bool has_xb200 = bladerf_expansion_attach(_dev, BLADERF_XB_200) != 0;
