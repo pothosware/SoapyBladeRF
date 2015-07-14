@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 2.8.7)
 project(SoapyBladeRF CXX)
 
-find_package(SoapySDR "0.2.1" CONFIG)
+find_package(SoapySDR "0.2.1" NO_MODULE)
 if (NOT SoapySDR_FOUND)
     message(FATAL_ERROR "Soapy SDR development files not found...")
 endif ()
