@@ -12,7 +12,6 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(LibbladeRF)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libbladeRF/include)
 if (NOT LIBBLADERF_FOUND)
     message(FATAL_ERROR "Blade RF development files not found...")
 endif ()
