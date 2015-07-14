@@ -17,6 +17,7 @@ Section: libs
 Architecture: any
 Conflicts: soapyosmo-bladerf
 Replaces: soapyosmo-bladerf
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Soapy BladeRF - BladeRF device support for Soapy SDR.
  A Soapy module that supports BladeRF devices within the Soapy API.
