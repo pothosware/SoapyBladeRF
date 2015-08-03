@@ -169,7 +169,8 @@ int bladeRF_SoapySDR::deactivateStream(
     if (direction == SOAPY_SDR_TX)
     {
         //in a burst -> end it
-        if (_inTxBurst) this->sendTxEndBurst();
+        //if (_inTxBurst) this->sendTxEndBurst();
+        _inTxBurst = false;
     }
 
     return 0;
@@ -275,8 +276,17 @@ int bladeRF_SoapySDR::writeStream(
     md.flags = 0;
     md.status = 0;
 
-    //pack the metadata
-    if (not _inTxBurst)
+    //time and burst start
+    if (_inTxBurst)
+    {
+        if ((flags & SOAPY_SDR_HAS_TIME) != 0)
+        {
+            md.timestamp = _timeNsToTxTicks(timeNs);
+            md.flags |= BLADERF_META_FLAG_TX_UPDATE_TIMESTAMP;
+            _txNextTicks = md.timestamp;
+        }
+    }
+    else
     {
         md.flags |= BLADERF_META_FLAG_TX_BURST_START;
         if ((flags & SOAPY_SDR_HAS_TIME) != 0)
@@ -289,6 +299,12 @@ int bladeRF_SoapySDR::writeStream(
             bladerf_get_timestamp(_dev, BLADERF_MODULE_TX, &md.timestamp);
         }
         _txNextTicks = md.timestamp;
+    }
+
+    //end of burst
+    if ((flags & SOAPY_SDR_END_BURST) != 0)
+    {
+        md.flags |= BLADERF_META_FLAG_TX_BURST_END;
     }
 
     //prepare buffers
@@ -319,9 +335,6 @@ int bladeRF_SoapySDR::writeStream(
     //always in a burst after successful tx
     _inTxBurst = true;
 
-    //end the burst if specified
-    if ((flags & SOAPY_SDR_END_BURST) != 0) this->sendTxEndBurst();
-
     //parse the status
     if ((md.status & BLADERF_META_STATUS_UNDERRUN) != 0)
     {
@@ -332,43 +345,18 @@ int bladeRF_SoapySDR::writeStream(
         _txResps.push(resp);
     }
 
-    return numElems;
-}
-
-void bladeRF_SoapySDR::sendTxEndBurst(void)
-{
-    //initialize metadata
-    bladerf_metadata md;
-    md.timestamp = 0;
-    md.flags = BLADERF_META_FLAG_TX_BURST_END;
-    md.status = 0;
-
-    //special end of burst 0 payload
-    uint32_t samples[2];
-    samples[0] = 0;
-    samples[1] = 0;
-
-    //loop in case it fails
-    while (true)
+    //end burst status message
+    if ((flags & SOAPY_SDR_END_BURST) != 0)
     {
-        int ret = bladerf_sync_tx(_dev, samples, 2, &md, 1000);
-        if (ret == 0) break;
-        if (ret == BLADERF_ERR_TIMEOUT) continue;
-        if (ret != 0)
-        {
-            SoapySDR::logf(SOAPY_SDR_ERROR, "sendTxEndBurst::bladerf_sync_tx() returned %s", _err2str(ret).c_str());
-        }
-        break;
+        StreamMetadata resp;
+        resp.flags = SOAPY_SDR_END_BURST | SOAPY_SDR_HAS_TIME;
+        resp.timeNs = this->_txTicksToTimeNs(_txNextTicks);
+        resp.code = 0;
+        _txResps.push(resp);
+        _inTxBurst = false;
     }
 
-    //status
-    StreamMetadata resp;
-    resp.flags = SOAPY_SDR_END_BURST | SOAPY_SDR_HAS_TIME;
-    resp.timeNs = this->_txTicksToTimeNs(_txNextTicks);
-    resp.code = 0;
-    _txResps.push(resp);
-
-    _inTxBurst = false;
+    return numElems;
 }
 
 int bladeRF_SoapySDR::readStreamStatus(
