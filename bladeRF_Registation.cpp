@@ -40,7 +40,7 @@ static SoapySDR::Kwargs devinfo_to_kwargs(const bladerf_devinfo &info)
     sprintf(instanceStr, "%u", info.instance);
     args["instance"] = instanceStr;
 
-    args["serial"] = std::string(info.serial, BLADERF_SERIAL_LENGTH);
+    args["serial"] = std::string(info.serial);
     return args;
 }
 
