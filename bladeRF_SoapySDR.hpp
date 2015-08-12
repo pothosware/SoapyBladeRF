@@ -254,7 +254,6 @@ private:
         return SoapySDR::timeNsToTicks(timeNs-_timeNsOffset, _txSampRate);
     }
 
-    std::map<int, size_t> _cachedBuffSizes;
     double _rxSampRate;
     double _txSampRate;
     bool _inTxBurst;
@@ -264,8 +263,10 @@ private:
     long long _rxNextTicks;
     long long _txNextTicks;
     long long _timeNsOffset;
-    int16_t _rxConvBuff[1024*16];
-    int16_t _txConvBuff[1024*16];
+    int16_t *_rxConvBuff;
+    int16_t *_txConvBuff;
+    size_t _rxBuffSize;
+    size_t _txBuffSize;
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;
 

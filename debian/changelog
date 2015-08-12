@@ -1,5 +1,7 @@
 soapybladerf (0.1.1) unstable; urgency=low
 
+  * Clip read/write number of samples to conversion buffer size
+  * Arbitrary sized conversion buffers based on buffer size
   * Fix find function serial string to use null terminator
   * Support use of BLADERF_META_FLAG_TX_UPDATE_TIMESTAMP flag
   * Remove BLADERF_META_FLAG_TX_BURST_END padding (2015.07)

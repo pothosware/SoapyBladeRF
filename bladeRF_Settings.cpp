@@ -38,6 +38,8 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _rxNextTicks(0),
     _txNextTicks(0),
     _timeNsOffset(0),
+    _rxBuffSize(0),
+    _txBuffSize(0),
     _dev(NULL)
 {
     bladerf_devinfo info = devinfo;

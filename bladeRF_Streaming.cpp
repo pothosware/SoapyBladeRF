@@ -94,14 +94,16 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     {
         _rxOverflow = false;
         _rxFloats = (format == "CF32");
+        _rxConvBuff = new int16_t[bufSize*2];
+        _rxBuffSize = bufSize;
     }
 
     if (direction == SOAPY_SDR_TX)
     {
         _txFloats = (format == "CF32");
+        _txConvBuff = new int16_t[bufSize*2];
+        _txBuffSize = bufSize;
     }
-
-    _cachedBuffSizes[direction] = bufSize;
 
     return (SoapySDR::Stream *)(new int(direction));
 }
@@ -118,13 +120,24 @@ void bladeRF_SoapySDR::closeStream(SoapySDR::Stream *stream)
         throw std::runtime_error("closeStream() " + _err2str(ret));
     }
 
+    //cleanup stream convert buffers
+    if (direction == SOAPY_SDR_RX)
+    {
+        delete [] _rxConvBuff;
+    }
+
+    if (direction == SOAPY_SDR_TX)
+    {
+        delete [] _txConvBuff;
+    }
+
     delete reinterpret_cast<int *>(stream);
 }
 
 size_t bladeRF_SoapySDR::getStreamMTU(SoapySDR::Stream *stream) const
 {
     const int direction = *reinterpret_cast<int *>(stream);
-    return _cachedBuffSizes.at(direction);
+    return (direction == SOAPY_SDR_RX)?_rxBuffSize:_txBuffSize;
 }
 
 int bladeRF_SoapySDR::activateStream(
@@ -184,6 +197,9 @@ int bladeRF_SoapySDR::readStream(
     long long &timeNs,
     const long timeoutUs)
 {
+    //clip to the available conversion buffer size
+    numElems = std::min(numElems, _rxBuffSize);
+
     //extract the front-most command
     //no command, this is a timeout...
     if (_rxCmds.empty()) return SOAPY_SDR_TIMEOUT;
@@ -265,11 +281,14 @@ int bladeRF_SoapySDR::readStream(
 int bladeRF_SoapySDR::writeStream(
     SoapySDR::Stream *,
     const void * const *buffs,
-    const size_t numElems,
+    size_t numElems,
     int &flags,
     const long long timeNs,
     const long timeoutUs)
 {
+    //clip to the available conversion buffer size
+    numElems = std::min(numElems, _txBuffSize);
+
     //initialize metadata
     bladerf_metadata md;
     md.timestamp = 0;
