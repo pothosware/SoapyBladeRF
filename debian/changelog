@@ -1,5 +1,6 @@
 soapybladerf (0.1.1) unstable; urgency=low
 
+  * Fix undefined behavior with bladerf_sync_rx() minimum timeout
   * Clip read/write number of samples to conversion buffer size
   * Arbitrary sized conversion buffers based on buffer size
   * Fix find function serial string to use null terminator

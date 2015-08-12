@@ -40,6 +40,7 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _timeNsOffset(0),
     _rxBuffSize(0),
     _txBuffSize(0),
+    _rxMinTimeoutMs(0),
     _dev(NULL)
 {
     bladerf_devinfo info = devinfo;
@@ -283,8 +284,15 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
 
     //stash the actual rate
     const double actual = this->getSampleRate(direction, channel);
-    if (direction == SOAPY_SDR_RX) _rxSampRate = actual;
-    if (direction == SOAPY_SDR_TX) _txSampRate = actual;
+    if (direction == SOAPY_SDR_RX)
+    {
+        _rxSampRate = actual;
+        this->updateRxMinTimeoutMs();
+    }
+    if (direction == SOAPY_SDR_TX)
+    {
+        _txSampRate = actual;
+    }
 
     //restore the previous hardware time setting (after rate stash)
     this->setHardwareTime(timeNow);

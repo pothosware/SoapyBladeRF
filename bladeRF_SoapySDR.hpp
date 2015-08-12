@@ -254,6 +254,12 @@ private:
         return SoapySDR::timeNsToTicks(timeNs-_timeNsOffset, _txSampRate);
     }
 
+    void updateRxMinTimeoutMs(void)
+    {
+        //the 2x factor allows padding so we aren't on the fence
+        _rxMinTimeoutMs = long((2*1000*_rxBuffSize)/_rxSampRate);
+    }
+
     double _rxSampRate;
     double _txSampRate;
     bool _inTxBurst;
@@ -267,6 +273,7 @@ private:
     int16_t *_txConvBuff;
     size_t _rxBuffSize;
     size_t _txBuffSize;
+    long _rxMinTimeoutMs;
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;
 

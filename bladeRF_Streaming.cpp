@@ -96,6 +96,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
         _rxFloats = (format == "CF32");
         _rxConvBuff = new int16_t[bufSize*2];
         _rxBuffSize = bufSize;
+        this->updateRxMinTimeoutMs();
     }
 
     if (direction == SOAPY_SDR_TX)
@@ -235,7 +236,8 @@ int bladeRF_SoapySDR::readStream(
     if (_rxFloats) samples = _rxConvBuff;
 
     //recv the rx samples
-    int ret = bladerf_sync_rx(_dev, samples, numElems, &md, timeoutUs/1000);
+    const long timeoutMs = std::max(_rxMinTimeoutMs, timeoutUs/1000);
+    int ret = bladerf_sync_rx(_dev, samples, numElems, &md, timeoutMs);
     if (ret == BLADERF_ERR_TIMEOUT) return SOAPY_SDR_TIMEOUT;
     if (ret == BLADERF_ERR_TIME_PAST) return SOAPY_SDR_TIME_ERROR;
     if (ret != 0)
