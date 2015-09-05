@@ -201,6 +201,20 @@ public:
 
     unsigned readRegister(const unsigned addr) const;
 
+    /*******************************************************************
+     * GPIO API
+     ******************************************************************/
+
+    std::vector<std::string> listGPIOBanks(void) const;
+
+    void writeGPIO(const std::string &bank, const unsigned value);
+
+    unsigned readGPIO(const std::string &bank) const;
+
+    void writeGPIODir(const std::string &bank, const unsigned dir);
+
+    unsigned readGPIODir(const std::string &bank) const;
+
 private:
 
     static bladerf_module _dir2mod(const int direction)

@@ -453,3 +453,83 @@ unsigned bladeRF_SoapySDR::readRegister(const unsigned addr) const
     }
     return value;
 }
+
+/*******************************************************************
+ * GPIO API
+ ******************************************************************/
+
+std::vector<std::string> bladeRF_SoapySDR::listGPIOBanks(void) const
+{
+    std::vector<std::string> banks;
+    banks.push_back("CONFIG");
+    banks.push_back("EXPANSION");
+    return banks;
+}
+
+void bladeRF_SoapySDR::writeGPIO(const std::string &bank, const unsigned value)
+{
+    int ret = 0;
+    if (bank == "CONFIG")
+    {
+        ret = bladerf_config_gpio_write(_dev, value);
+    }
+    else if (bank == "EXPANSION")
+    {
+        ret = bladerf_expansion_gpio_write(_dev, value);
+    }
+    else throw std::runtime_error("writeGPIO("+bank+") unknown bank name");
+
+    if (ret != 0) throw std::runtime_error("writeGPIO("+bank+") " + _err2str(ret));
+}
+
+unsigned bladeRF_SoapySDR::readGPIO(const std::string &bank) const
+{
+    uint32_t value = 0;
+    int ret = 0;
+    if (bank == "CONFIG")
+    {
+        ret = bladerf_config_gpio_read(_dev, &value);
+    }
+    else if (bank == "EXPANSION")
+    {
+        ret = bladerf_expansion_gpio_read(_dev, &value);
+    }
+    else throw std::runtime_error("readGPIO("+bank+") unknown bank name");
+
+    if (ret != 0) throw std::runtime_error("readGPIO("+bank+") " + _err2str(ret));
+    return value;
+}
+
+void bladeRF_SoapySDR::writeGPIODir(const std::string &bank, const unsigned dir)
+{
+    int ret = 0;
+    if (bank == "CONFIG")
+    {
+        throw std::runtime_error("data direction not configurable for CONFIG bank");
+    }
+    else if (bank == "EXPANSION")
+    {
+        ret = bladerf_expansion_gpio_dir_write(_dev, dir);
+    }
+    else throw std::runtime_error("writeGPIODir("+bank+") unknown bank name");
+
+    if (ret != 0) throw std::runtime_error("writeGPIODir("+bank+") " + _err2str(ret));
+}
+
+unsigned bladeRF_SoapySDR::readGPIODir(const std::string &bank) const
+{
+    uint32_t value = 0;
+    int ret = 0;
+    if (bank == "CONFIG")
+    {
+        throw std::runtime_error("data direction not configurable for CONFIG bank");
+    }
+    else if (bank == "EXPANSION")
+    {
+        ret = bladerf_expansion_gpio_dir_read(_dev, &value);
+    }
+    else throw std::runtime_error("readGPIODir("+bank+") unknown bank name");
+
+    if (ret != 0) throw std::runtime_error("readGPIODir("+bank+") " + _err2str(ret));
+    return value;
+}
