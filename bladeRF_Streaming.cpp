@@ -403,13 +403,13 @@ int bladeRF_SoapySDR::readStreamStatus(
         //current status time expired, done waiting...
         if (_txResps.front().timeNs < timeNowNs) break;
 
-        //check for timeout expired
-        timeNowNs = this->getHardwareTime();
-        if (exitTimeNs < timeNowNs) return SOAPY_SDR_TIMEOUT;
-
         //sleep a bit, never more than time remaining
         pollSleep:
         usleep(std::min<long>(1000, (exitTimeNs-timeNowNs)/1000));
+
+        //check for timeout expired
+        timeNowNs = this->getHardwareTime();
+        if (exitTimeNs < timeNowNs) return SOAPY_SDR_TIMEOUT;
     }
 
     //extract the most recent status event
