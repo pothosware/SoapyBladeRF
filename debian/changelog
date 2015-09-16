@@ -6,6 +6,7 @@ soapybladerf (0.2.0) unstable; urgency=low
 
 soapybladerf (0.1.2) unstable; urgency=low
 
+  * Return SOAPY_SDR_NOT_SUPPORTED for RX readStreamStatus()
   * Fix readStreamStatus() timeout infinite loop condition
 
  -- Josh Blum <josh@pothosware.com>  Wed, 16 Sep 2015 01:34:58 -0700

@@ -381,13 +381,16 @@ int bladeRF_SoapySDR::writeStream(
 }
 
 int bladeRF_SoapySDR::readStreamStatus(
-    SoapySDR::Stream *,
+    SoapySDR::Stream *stream,
     size_t &,
     int &flags,
     long long &timeNs,
     const long timeoutUs
 )
 {
+    const int direction = *reinterpret_cast<int *>(stream);
+    if (direction == SOAPY_SDR_RX) return SOAPY_SDR_NOT_SUPPORTED;
+
     //wait for an event to be ready considering the timeout and time
     //this is an emulation by polling and waiting on the hardware time
     long long timeNowNs = this->getHardwareTime();
