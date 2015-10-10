@@ -2,7 +2,7 @@ soapybladerf (0.2.0) unstable; urgency=low
 
   * Added GPIO access hooks for CONFIG and EXPANSION bank
 
- -- Josh Blum <josh@pothosware.com>  Fri, 04 Sep 2015 18:00:50 -0700
+ -- Josh Blum <josh@pothosware.com>  Sat, 10 Oct 2015 11:26:14 -0700
 
 soapybladerf (0.1.2) unstable; urgency=low
 
