@@ -34,6 +34,57 @@
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
 
+#define STRINGIFY(x) #x
+
+std::vector<std::string> bladeRF_SoapySDR::getStreamFormats(const int, const size_t) const
+{
+    std::vector<std::string> formats;
+    formats.push_back("CS16");
+    formats.push_back("CF32");
+    return formats;
+}
+
+std::string bladeRF_SoapySDR::getNativeStreamFormat(const int, const size_t, double &fullScale) const
+{
+    fullScale = 2048;
+    return "CS16";
+}
+
+SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_t) const
+{
+    SoapySDR::ArgInfoList streamArgs;
+
+    SoapySDR::ArgInfo buffersArg;
+    buffersArg.key = "buffers";
+    buffersArg.value = STRINGIFY(DEF_NUM_BUFFS);
+    buffersArg.name = "Buffer Count";
+    buffersArg.description = "Number of async USB buffers.";
+    buffersArg.units = "buffers";
+    buffersArg.type = SoapySDR::ArgInfo::INT;
+    streamArgs.push_back(buffersArg);
+
+    SoapySDR::ArgInfo lengthArg;
+    lengthArg.key = "buflen";
+    lengthArg.value = STRINGIFY(DEF_BUFF_LEN);
+    lengthArg.name = "Buffer Length";
+    lengthArg.description = "Number of bytes per USB buffer, the number must be a multiple of 1024.";
+    lengthArg.units = "bytes";
+    lengthArg.type = SoapySDR::ArgInfo::INT;
+    streamArgs.push_back(lengthArg);
+
+    SoapySDR::ArgInfo xfersArg;
+    xfersArg.key = "transfers";
+    xfersArg.value = "0";
+    xfersArg.name = "Num Transfers";
+    xfersArg.description = "Number of async USB transfers. Use 0 for automatic";
+    xfersArg.units = "bytes";
+    xfersArg.type = SoapySDR::ArgInfo::INT;
+    xfersArg.range = SoapySDR::Range(0, 32);
+    streamArgs.push_back(xfersArg);
+
+    return streamArgs;
+}
+
 SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     const int direction,
     const std::string &format,
