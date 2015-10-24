@@ -34,7 +34,8 @@
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
 
-#define STRINGIFY(x) #x
+#define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
 
 std::vector<std::string> bladeRF_SoapySDR::getStreamFormats(const int, const size_t) const
 {
