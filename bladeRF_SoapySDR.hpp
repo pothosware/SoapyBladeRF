@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015 Josh Blum
+ * Copyright (C) 2015-2016 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -214,9 +214,13 @@ public:
 
     void writeGPIO(const std::string &bank, const unsigned value);
 
+    void writeGPIO(const std::string &bank, const unsigned value, const unsigned mask);
+
     unsigned readGPIO(const std::string &bank) const;
 
     void writeGPIODir(const std::string &bank, const unsigned dir);
+
+    void writeGPIODir(const std::string &bank, const unsigned dir, const unsigned mask);
 
     unsigned readGPIODir(const std::string &bank) const;
 

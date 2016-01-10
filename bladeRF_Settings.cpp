@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015 Josh Blum
+ * Copyright (C) 2015-2016 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -482,6 +482,19 @@ void bladeRF_SoapySDR::writeGPIO(const std::string &bank, const unsigned value)
     if (ret != 0) throw std::runtime_error("writeGPIO("+bank+") " + _err2str(ret));
 }
 
+void bladeRF_SoapySDR::writeGPIO(const std::string &bank, const unsigned value, const unsigned mask)
+{
+    #if defined(LIBBLADERF_API_VERSION) && (LIBBLADERF_API_VERSION >= 0x01050000)
+    if (bank == "EXPANSION")
+    {
+        int ret = bladerf_expansion_gpio_masked_write(_dev, mask, value);
+        if (ret != 0) throw std::runtime_error("writeGPIODir("+bank+") " + _err2str(ret));
+        return;
+    }
+    #endif
+    return SoapySDR::Device::writeGPIO(bank, value, mask);
+}
+
 unsigned bladeRF_SoapySDR::readGPIO(const std::string &bank) const
 {
     uint32_t value = 0;
@@ -514,6 +527,19 @@ void bladeRF_SoapySDR::writeGPIODir(const std::string &bank, const unsigned dir)
     else throw std::runtime_error("writeGPIODir("+bank+") unknown bank name");
 
     if (ret != 0) throw std::runtime_error("writeGPIODir("+bank+") " + _err2str(ret));
+}
+
+void bladeRF_SoapySDR::writeGPIODir(const std::string &bank, const unsigned dir, const unsigned mask)
+{
+    #if defined(LIBBLADERF_API_VERSION) && (LIBBLADERF_API_VERSION >= 0x01050000)
+    if (bank == "EXPANSION")
+    {
+        int ret = bladerf_expansion_gpio_dir_masked_write(_dev, mask, dir);
+        if (ret != 0) throw std::runtime_error("writeGPIODir("+bank+") " + _err2str(ret));
+        return;
+    }
+    #endif
+    return SoapySDR::Device::writeGPIODir(bank, dir, mask);
 }
 
 unsigned bladeRF_SoapySDR::readGPIODir(const std::string &bank) const
