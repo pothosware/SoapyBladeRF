@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015 Josh Blum
+ * Copyright (C) 2015-2016 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -235,7 +235,19 @@ int bladeRF_SoapySDR::deactivateStream(
     if (direction == SOAPY_SDR_TX)
     {
         //in a burst -> end it
-        //if (_inTxBurst) this->sendTxEndBurst();
+        if (_inTxBurst)
+        {
+            //initialize metadata
+            bladerf_metadata md;
+            md.timestamp = 0;
+            md.flags = BLADERF_META_FLAG_TX_BURST_END;
+            md.status = 0;
+
+            //send the tx samples
+            _txConvBuff[0] = 0;
+            _txConvBuff[1] = 0;
+            bladerf_sync_tx(_dev, _txConvBuff, 1, &md, 100/*ms*/);
+        }
         _inTxBurst = false;
     }
 
