@@ -352,6 +352,9 @@ int bladeRF_SoapySDR::writeStream(
     const long long timeNs,
     const long timeoutUs)
 {
+    //clear EOB when the last sample will not be transmitted
+    if (numElems > _txBuffSize) flags &= ~(SOAPY_SDR_END_BURST);
+
     //clip to the available conversion buffer size
     numElems = std::min(numElems, _txBuffSize);
 

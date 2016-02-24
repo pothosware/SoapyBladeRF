@@ -1,6 +1,7 @@
 soapybladerf (0.3.1.1) unstable; urgency=low
 
   * Fix tx end of burst implementation in deactivateStream()
+  * Clear EOB when the last sample will not be transmitted
 
  -- Josh Blum <josh@pothosware.com>  Fri, 19 Feb 2016 18:03:40 -0800
 
