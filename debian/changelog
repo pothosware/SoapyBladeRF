@@ -1,15 +1,10 @@
-soapybladerf (0.3.1.1) unstable; urgency=low
+soapybladerf (0.3.1) unstable; urgency=low
 
   * Fix tx end of burst implementation in deactivateStream()
   * Clear EOB when the last sample will not be transmitted
-
- -- Josh Blum <josh@pothosware.com>  Fri, 19 Feb 2016 18:03:40 -0800
-
-soapybladerf (0.3.1) unstable; urgency=low
-
   * Implemented masked GPIO write based on v1.5.0 API
 
- -- Josh Blum <josh@pothosware.com>  Sat, 09 Jan 2016 23:15:04 -0800
+ -- Josh Blum <josh@pothosware.com>  Tue, 01 Mar 2016 13:16:19 -0800
 
 soapybladerf (0.3.0) unstable; urgency=low
 
