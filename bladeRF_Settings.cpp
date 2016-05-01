@@ -21,6 +21,7 @@
 
 #include "bladeRF_SoapySDR.hpp"
 #include <SoapySDR/Logger.hpp>
+#include <algorithm> //find
 #include <stdexcept>
 #include <cstdio>
 
@@ -452,6 +453,321 @@ unsigned bladeRF_SoapySDR::readRegister(const unsigned addr) const
         throw std::runtime_error("readRegister() " + _err2str(ret));
     }
     return value;
+}
+
+/*******************************************************************
+* Settings API
+******************************************************************/
+
+SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
+{
+    SoapySDR::ArgInfoList setArgs;
+
+    // XB200 setting
+    SoapySDR::ArgInfo xb200SettingArg;
+    xb200SettingArg.key = "xb200";
+    xb200SettingArg.value = "disabled";
+    xb200SettingArg.name = "XB200 Transverter";
+    xb200SettingArg.description = "bladeRF XB200 Transverter Board";
+    xb200SettingArg.type = SoapySDR::ArgInfo::STRING;
+    xb200SettingArg.options.push_back("disabled");
+    xb200SettingArg.optionNames.push_back("Disabled");
+    xb200SettingArg.options.push_back("50M");
+    xb200SettingArg.optionNames.push_back("Filterbank: 50M");
+    xb200SettingArg.options.push_back("144M");
+    xb200SettingArg.optionNames.push_back("Filterbank: 144M");
+    xb200SettingArg.options.push_back("222M");
+    xb200SettingArg.optionNames.push_back("Filterbank: 222M");
+    xb200SettingArg.options.push_back("auto1db");
+    xb200SettingArg.optionNames.push_back("Filterbank: Auto (1dB)");
+    xb200SettingArg.options.push_back("auto3db");
+    xb200SettingArg.optionNames.push_back("Filterbank: Auto (3dB)");
+    xb200SettingArg.options.push_back("auto");
+    xb200SettingArg.optionNames.push_back("Filterbank: Auto");
+    xb200SettingArg.options.push_back("custom");
+    xb200SettingArg.optionNames.push_back("Filterbank: Custom");
+
+    setArgs.push_back(xb200SettingArg);
+
+    // Sampling mode
+    SoapySDR::ArgInfo samplingModeArg;
+    samplingModeArg.key = "sampling_mode";
+    samplingModeArg.value = "internal";
+    samplingModeArg.name = "Sampling Mode";
+    samplingModeArg.description = "Internal = Via RX/TX connectors, External = Direct sampling from J60/J61 connectors";
+    samplingModeArg.type = SoapySDR::ArgInfo::STRING;
+    samplingModeArg.options.push_back("internal");
+    samplingModeArg.optionNames.push_back("Internal (Default)");
+    samplingModeArg.options.push_back("external");
+    samplingModeArg.optionNames.push_back("Direct Sampling");
+
+    setArgs.push_back(samplingModeArg);
+
+    // Loopback
+    SoapySDR::ArgInfo lookbackArg;
+    lookbackArg.key = "loopback";
+    lookbackArg.value = "disabled";
+    lookbackArg.name = "Loopback Mode";
+    lookbackArg.description = "Enable/disable internal loopback";
+    lookbackArg.type = SoapySDR::ArgInfo::STRING;
+    lookbackArg.options.push_back("disabled");
+    lookbackArg.optionNames.push_back("Disabled");
+    lookbackArg.options.push_back("firmware");
+    lookbackArg.optionNames.push_back("FX3 Firmware");
+    lookbackArg.options.push_back("bb_txlpf_rxvga2");
+    lookbackArg.optionNames.push_back("Baseband: TXLPF to RXVGA2");
+    lookbackArg.options.push_back("bb_txvga1_rxvga2");
+    lookbackArg.optionNames.push_back("Baseband: TXVGA1 to RXVGA2");
+    lookbackArg.options.push_back("bb_txlpf_rxlpf");
+    lookbackArg.optionNames.push_back("Baseband: TXLPF to RXLPF");
+    lookbackArg.options.push_back("bb_txvga1_rxlpf");
+    lookbackArg.optionNames.push_back("Baseband: TXVGA1 to RXLPF");
+    lookbackArg.options.push_back("rf_lna1");
+    lookbackArg.optionNames.push_back("RF: TXMIX to LNA1");
+    lookbackArg.options.push_back("rf_lna2");
+    lookbackArg.optionNames.push_back("RF: TXMIX to LNA2");
+    lookbackArg.options.push_back("rf_lna3");
+    lookbackArg.optionNames.push_back("RF: TXMIX to LNA3");
+
+    setArgs.push_back(lookbackArg);
+
+    return setArgs;
+}
+
+void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &value)
+{
+    if (key == "xb200")
+    {
+        // Verify that a valid setting has arrived
+        std::vector<std::string> xb200_validSettings{ "disabled", "50M", "144M", "222M", "auto1db", "auto3db", "auto", "custom" };
+        if (std::find(std::begin(xb200_validSettings), std::end(xb200_validSettings), value) != std::end(xb200_validSettings))
+        {
+            // --> Valid setting has arrived
+
+            // Get attached expansion device
+            bladerf_xb _bladerf_xb_attached = bladerf_xb::BLADERF_XB_NONE;
+            bladerf_expansion_get_attached(_dev, &_bladerf_xb_attached);
+
+            // If "disabled," ensure board is bypassed, if present, and return
+            if (value == "disabled")
+            {
+                if (_bladerf_xb_attached == bladerf_xb::BLADERF_XB_200)
+                {
+                    // Apply bypass around connected XB200
+                    SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Disabling connected XB200 by bypassing signal path");
+                    bladerf_xb200_set_path(_dev, bladerf_module::BLADERF_MODULE_RX, bladerf_xb200_path::BLADERF_XB200_BYPASS);
+                }
+
+                return;
+            }
+
+            // Attach the XB200, if it isn't already attached
+            if (_bladerf_xb_attached == bladerf_xb::BLADERF_XB_NONE)
+            {
+                if (bladerf_expansion_attach(_dev, bladerf_xb::BLADERF_XB_200))
+                {
+                    SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Could not attach to XB200");
+                    return;
+                }
+            }
+            SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: XB200 is attached");
+
+            // Which filterbank was selected?
+            bladerf_xb200_filter filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_1DB;
+
+            if (value == "50M")
+            {
+                // 50-54 MHz (6 meter band) filterbank
+                filter = bladerf_xb200_filter::BLADERF_XB200_50M;
+            }
+            else if (value == "144M")
+            {
+                // 144-148 MHz (2 meter band) filterbank
+                filter = bladerf_xb200_filter::BLADERF_XB200_144M;
+            }
+            else if (value == "222M")
+            {
+                // 222-225 MHz (1.25 meter band) filterbank
+                // Note that this filter option is technically wider, covering 206-235 MHz
+                filter = bladerf_xb200_filter::BLADERF_XB200_222M;
+            }
+            else if (value == "auto1db")
+            {
+                // The other filter options are automatically selected depending on the RX or TX
+                // module's current frequency, based upon the 1dB points of the on-board filters
+                // For frequencies outside the range of the on-board filters, the custom path is used
+                filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_1DB;
+            }
+            else if (value == "auto3db")
+            {
+                // The other filter options are automatically selected depending on the RX or TX
+                // module's current frequency, based upon the 3dB points of the on-board filters
+                // For frequencies outside the range of the on-board filters, the custom path is used
+                filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_3DB;
+            }
+            else if (value == "custom")
+            {
+                // The custom filter bank path across the FILT and FILT-ANT SMA connectors
+                filter = bladerf_xb200_filter::BLADERF_XB200_CUSTOM;
+            }
+            else
+            {
+                // Default: Auto, 1dB points
+                // The other filter options are automatically selected depending on the RX or TX
+                // module's current frequency, based upon the 1dB points of the on-board filters
+                // For frequencies outside the range of the on-board filters, the custom path is used
+                filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_1DB;
+            }
+
+            // Set the filterbank
+            SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Set XB200 filterbank '%s'", value.c_str());
+            int ret = bladerf_xb200_set_filterbank(_dev, bladerf_module::BLADERF_MODULE_RX, filter);
+            if (ret != 0)
+            {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_xb200_set_filterbank(%s) returned %s", value.c_str(), _err2str(ret).c_str());
+                throw std::runtime_error("writeSetting() " + _err2str(ret));
+            }
+
+            // Check signal path
+            bladerf_xb200_path _bladerf_xb200_path = bladerf_xb200_path::BLADERF_XB200_MIX;
+            bladerf_xb200_get_path(_dev, bladerf_module::BLADERF_MODULE_RX, &_bladerf_xb200_path);
+            if (_bladerf_xb200_path != bladerf_xb200_path::BLADERF_XB200_MIX)
+            {
+                // Apply mix path through XB200
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Adjusting mix path through XB200");
+                bladerf_xb200_set_path(_dev, bladerf_module::BLADERF_MODULE_RX, bladerf_xb200_path::BLADERF_XB200_MIX);
+            }
+        }
+        else
+        {
+            // --> Invalid setting has arrived
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid XB200 setting '%s'", value.c_str());
+            //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
+        }
+    }
+    else if (key == "sampling_mode")
+    {
+        /* Configure the sampling of the LMS6002D to be either internal or external.
+        ** Internal sampling will read from the RXVGA2 driver internal to the chip.
+        ** External sampling will connect the ADC inputs to the external inputs for direct sampling.
+        */
+
+        // Verify that a valid setting has arrived
+        std::vector<std::string> sampling_mode_validSettings{ "internal", "external" };
+        if (std::find(std::begin(sampling_mode_validSettings), std::end(sampling_mode_validSettings), value) != std::end(sampling_mode_validSettings))
+        {
+            // --> Valid setting has arrived
+
+            // Set the sampling mode
+            int ret = 0;
+            if (value == "external")
+            {
+                // External/direct sampling
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Set sampling mode to direct/external sampling", value.c_str());
+                ret = bladerf_set_sampling(_dev, bladerf_sampling::BLADERF_SAMPLING_EXTERNAL);
+            }
+            else
+            {
+                // Default: Internal
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Set sampling mode to internal sampling", value.c_str());
+                ret = bladerf_set_sampling(_dev, bladerf_sampling::BLADERF_SAMPLING_INTERNAL);
+            }
+            if (ret != 0)
+            {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_sampling(%s) returned %s", value.c_str(), _err2str(ret).c_str());
+                throw std::runtime_error("writeSetting() " + _err2str(ret));
+            }
+        }
+        else
+        {
+            // --> Invalid setting has arrived
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid sampling mode '%s'", value.c_str());
+            //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
+        }
+    }
+    else if (key == "loopback")
+    {
+        // Verify that a valid setting has arrived
+        std::vector<std::string> loopback_validSettings{ "disabled", "firmware", "bb_txlpf_rxvga2", "bb_txvga1_rxvga2", "bb_txlpf_rxlpf", "bb_txvga1_rxlpf", "rf_lna1", "rf_lna2", "rf_lna3" };
+        if (std::find(std::begin(loopback_validSettings), std::end(loopback_validSettings), value) != std::end(loopback_validSettings))
+        {
+            // --> Valid setting has arrived
+
+            // Which loopback mode was selected?
+            bladerf_loopback loopback = bladerf_loopback::BLADERF_LB_NONE;
+
+            if (value == "firmware")
+            {
+                // Firmware loopback inside of the FX3
+                loopback = bladerf_loopback::BLADERF_LB_FIRMWARE;
+            }
+            else if (value == "bb_txlpf_rxvga2")
+            {
+                // Baseband loopback. TXLPF output is connected to the RXVGA2 input.
+                loopback = bladerf_loopback::BLADERF_LB_BB_TXLPF_RXVGA2;
+            }
+            else if (value == "bb_txvga1_rxvga2")
+            {
+                // Baseband loopback. TXVGA1 output is connected to the RXVGA2 input.
+                loopback = bladerf_loopback::BLADERF_LB_BB_TXVGA1_RXVGA2;
+            }
+            else if (value == "bb_txlpf_rxlpf")
+            {
+                // Baseband loopback. TXLPF output is connected to the RXLPF input.
+                loopback = bladerf_loopback::BLADERF_LB_BB_TXLPF_RXLPF;
+            }
+            else if (value == "bb_txvga1_rxlpf")
+            {
+                // Baseband loopback. TXVGA1 output is connected to RXLPF input.
+                loopback = bladerf_loopback::BLADERF_LB_BB_TXVGA1_RXLPF;
+            }
+            else if (value == "rf_lna1")
+            {
+                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA1.
+                loopback = bladerf_loopback::BLADERF_LB_RF_LNA1;
+            }
+            else if (value == "rf_lna2")
+            {
+                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA2.
+                loopback = bladerf_loopback::BLADERF_LB_RF_LNA2;
+            }
+            else if (value == "rf_lna3")
+            {
+                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA3.
+                loopback = bladerf_loopback::BLADERF_LB_RF_LNA3;
+            }
+            else
+            {
+                // Default: Disabled
+                // Disables loopback and returns to normal operation
+                loopback = bladerf_loopback::BLADERF_LB_NONE;
+            }
+
+            // If the loopback isn't already set, set the loopback
+            bladerf_loopback _bladerf_loopback = bladerf_loopback::BLADERF_LB_NONE;
+            bladerf_get_loopback(_dev, &_bladerf_loopback);
+            if (_bladerf_loopback != loopback)
+            {
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Loopback set '%s'", value.c_str());
+                int ret = bladerf_set_loopback(_dev, loopback);
+                if (ret != 0)
+                {
+                    SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_loopback(%s) returned %s", value.c_str(), _err2str(ret).c_str());
+                    throw std::runtime_error("writeSetting() " + _err2str(ret));
+                }
+            }
+        }
+        else
+        {
+            // --> Invalid setting has arrived
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid loopback setting '%s'", value.c_str());
+            //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
+        }
+    }
+    else
+    {
+        throw std::runtime_error("writeSetting(" + key + ") unknown setting");
+    }
 }
 
 /*******************************************************************

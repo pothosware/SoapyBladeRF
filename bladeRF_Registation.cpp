@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015 Josh Blum
+ * Copyright (C) 2015-2016 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -98,7 +98,16 @@ static std::vector<SoapySDR::Kwargs> find_bladeRF(const SoapySDR::Kwargs &matchA
 
 static SoapySDR::Device *make_bladeRF(const SoapySDR::Kwargs &args)
 {
-    return new bladeRF_SoapySDR(kwargs_to_devinfo(args));
+    SoapySDR::Device *bladerf = new bladeRF_SoapySDR(kwargs_to_devinfo(args));
+
+    //apply applicable settings found in args
+    for (const auto &info : bladerf->getSettingInfo())
+    {
+        if (args.count(info.key) == 0) continue;
+        bladerf->writeSetting(info.key, args.at(info.key));
+    }
+
+    return bladerf;
 }
 
 static SoapySDR::Registry register__bladeRF("bladerf", &find_bladeRF, &make_bladeRF, SOAPY_SDR_ABI_VERSION);

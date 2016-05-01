@@ -1,3 +1,10 @@
+Release 0.3.2 (pending)
+==========================
+
+- Added settings hooks for xb200 support
+- Added settings hooks for sampling mode
+- Added settings hooks for loopback modes
+
 Release 0.3.1 (2016-03-01)
 ==========================
 
