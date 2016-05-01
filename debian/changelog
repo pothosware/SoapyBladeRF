@@ -1,45 +1,35 @@
 soapybladerf (0.3.1) unstable; urgency=low
 
-  * Fix tx end of burst implementation in deactivateStream()
-  * Clear EOB when the last sample will not be transmitted
-  * Implemented masked GPIO write based on v1.5.0 API
+  * Release 0.3.1 (2016-03-01)
 
  -- Josh Blum <josh@pothosware.com>  Tue, 01 Mar 2016 13:16:19 -0800
 
 soapybladerf (0.3.0) unstable; urgency=low
 
-  * Implemented getStreamFormats() for SoapySDR v0.4
-  * Implemented getNativeStreamFormat() for SoapySDR v0.4
-  * Implemented getStreamArgsInfo() for SoapySDR v0.4
+  * Release 0.3.0 (2015-11-20)
 
  -- Josh Blum <josh@pothosware.com>  Fri, 23 Oct 2015 18:39:30 -0700
 
 soapybladerf (0.2.0) unstable; urgency=low
 
-  * Added GPIO access hooks for CONFIG and EXPANSION bank
+  * Release 0.2.0 (2015-10-10)
 
  -- Josh Blum <josh@pothosware.com>  Sat, 10 Oct 2015 11:26:14 -0700
 
 soapybladerf (0.1.2) unstable; urgency=low
 
-  * Return SOAPY_SDR_NOT_SUPPORTED for RX readStreamStatus()
-  * Fix readStreamStatus() timeout infinite loop condition
+  * Release 0.1.2 (2015-09-16)
 
  -- Josh Blum <josh@pothosware.com>  Wed, 16 Sep 2015 01:34:58 -0700
 
 soapybladerf (0.1.1) unstable; urgency=low
 
-  * Fix undefined behavior with bladerf_sync_rx() minimum timeout
-  * Clip read/write number of samples to conversion buffer size
-  * Arbitrary sized conversion buffers based on buffer size
-  * Fix find function serial string to use null terminator
-  * Support use of BLADERF_META_FLAG_TX_UPDATE_TIMESTAMP flag
-  * Remove BLADERF_META_FLAG_TX_BURST_END padding (2015.07)
+  * Release 0.1.1 (2015-08-15)
 
  -- Josh Blum <josh@pothosware.com>  Sat, 15 Aug 2015 11:18:36 -0700
 
 soapybladerf (0.1.0) unstable; urgency=low
 
-  * Release 0.1.0 (2015-07-13)
+  * Release 0.1.0 (2015-07-14)
 
  -- Josh Blum <josh@pothosware.com>  Mon, 13 Jul 2015 22:02:57 -0700
