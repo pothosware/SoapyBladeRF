@@ -21,6 +21,7 @@
 
 #include "bladeRF_SoapySDR.hpp"
 #include <SoapySDR/Logger.hpp>
+#include <algorithm> //find
 #include <stdexcept>
 #include <cstdio>
 
@@ -553,7 +554,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 if (_bladerf_xb_attached == bladerf_xb::BLADERF_XB_200)
                 {
                     // Apply bypass around connected XB200
-                    SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: Disabling connected XB200 by bypassing signal path");
+                    SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Disabling connected XB200 by bypassing signal path");
                     bladerf_xb200_set_path(_dev, bladerf_module::BLADERF_MODULE_RX, bladerf_xb200_path::BLADERF_XB200_BYPASS);
                 }
 
@@ -569,7 +570,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                     return;
                 }
             }
-            SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: XB200 is attached");
+            SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: XB200 is attached");
 
             // Which filterbank was selected?
             bladerf_xb200_filter filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_1DB;
@@ -592,14 +593,14 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             }
             else if (value == "auto1db")
             {
-                // The other filter options are automatically selected depending on the RX or TX 
+                // The other filter options are automatically selected depending on the RX or TX
                 // module's current frequency, based upon the 1dB points of the on-board filters
                 // For frequencies outside the range of the on-board filters, the custom path is used
                 filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_1DB;
             }
             else if (value == "auto3db")
             {
-                // The other filter options are automatically selected depending on the RX or TX 
+                // The other filter options are automatically selected depending on the RX or TX
                 // module's current frequency, based upon the 3dB points of the on-board filters
                 // For frequencies outside the range of the on-board filters, the custom path is used
                 filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_3DB;
@@ -612,18 +613,18 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             else
             {
                 // Default: Auto, 1dB points
-                // The other filter options are automatically selected depending on the RX or TX 
+                // The other filter options are automatically selected depending on the RX or TX
                 // module's current frequency, based upon the 1dB points of the on-board filters
                 // For frequencies outside the range of the on-board filters, the custom path is used
                 filter = bladerf_xb200_filter::BLADERF_XB200_AUTO_1DB;
             }
 
             // Set the filterbank
-            SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: Set XB200 filterbank '%s'", value);
+            SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Set XB200 filterbank '%s'", value.c_str());
             int ret = bladerf_xb200_set_filterbank(_dev, bladerf_module::BLADERF_MODULE_RX, filter);
             if (ret != 0)
             {
-                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_xb200_set_filterbank(%s) returned %s", value, _err2str(ret).c_str());
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_xb200_set_filterbank(%s) returned %s", value.c_str(), _err2str(ret).c_str());
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
 
@@ -633,14 +634,14 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             if (_bladerf_xb200_path != bladerf_xb200_path::BLADERF_XB200_MIX)
             {
                 // Apply mix path through XB200
-                SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: Adjusting mix path through XB200");
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Adjusting mix path through XB200");
                 bladerf_xb200_set_path(_dev, bladerf_module::BLADERF_MODULE_RX, bladerf_xb200_path::BLADERF_XB200_MIX);
             }
         }
         else
         {
             // --> Invalid setting has arrived
-            SoapySDR_logf(SOAPY_SDR_ERROR, "bladeRF: Invalid XB200 setting '%s'", value);
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid XB200 setting '%s'", value.c_str());
             //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
         }
     }
@@ -662,25 +663,25 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             if (value == "external")
             {
                 // External/direct sampling
-                SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: Set sampling mode to direct/external sampling", value);
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Set sampling mode to direct/external sampling", value.c_str());
                 ret = bladerf_set_sampling(_dev, bladerf_sampling::BLADERF_SAMPLING_EXTERNAL);
             }
             else
             {
                 // Default: Internal
-                SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: Set sampling mode to internal sampling", value);
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Set sampling mode to internal sampling", value.c_str());
                 ret = bladerf_set_sampling(_dev, bladerf_sampling::BLADERF_SAMPLING_INTERNAL);
             }
             if (ret != 0)
             {
-                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_sampling(%s) returned %s", value, _err2str(ret).c_str());
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_sampling(%s) returned %s", value.c_str(), _err2str(ret).c_str());
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
         else
         {
             // --> Invalid setting has arrived
-            SoapySDR_logf(SOAPY_SDR_ERROR, "bladeRF: Invalid sampling mode '%s'", value);
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid sampling mode '%s'", value.c_str());
             //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
         }
     }
@@ -697,42 +698,42 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
 
             if (value == "firmware")
             {
-                // Firmware loopback inside of the FX3 
+                // Firmware loopback inside of the FX3
                 loopback = bladerf_loopback::BLADERF_LB_FIRMWARE;
             }
             else if (value == "bb_txlpf_rxvga2")
             {
-                // Baseband loopback. TXLPF output is connected to the RXVGA2 input. 
+                // Baseband loopback. TXLPF output is connected to the RXVGA2 input.
                 loopback = bladerf_loopback::BLADERF_LB_BB_TXLPF_RXVGA2;
             }
             else if (value == "bb_txvga1_rxvga2")
             {
-                // Baseband loopback. TXVGA1 output is connected to the RXVGA2 input. 
+                // Baseband loopback. TXVGA1 output is connected to the RXVGA2 input.
                 loopback = bladerf_loopback::BLADERF_LB_BB_TXVGA1_RXVGA2;
             }
             else if (value == "bb_txlpf_rxlpf")
             {
-                // Baseband loopback. TXLPF output is connected to the RXLPF input. 
+                // Baseband loopback. TXLPF output is connected to the RXLPF input.
                 loopback = bladerf_loopback::BLADERF_LB_BB_TXLPF_RXLPF;
             }
             else if (value == "bb_txvga1_rxlpf")
             {
-                // Baseband loopback. TXVGA1 output is connected to RXLPF input. 
+                // Baseband loopback. TXVGA1 output is connected to RXLPF input.
                 loopback = bladerf_loopback::BLADERF_LB_BB_TXVGA1_RXLPF;
             }
             else if (value == "rf_lna1")
             {
-                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA1. 
+                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA1.
                 loopback = bladerf_loopback::BLADERF_LB_RF_LNA1;
             }
             else if (value == "rf_lna2")
             {
-                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA2. 
+                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA2.
                 loopback = bladerf_loopback::BLADERF_LB_RF_LNA2;
             }
             else if (value == "rf_lna3")
             {
-                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA3. 
+                // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA3.
                 loopback = bladerf_loopback::BLADERF_LB_RF_LNA3;
             }
             else
@@ -747,11 +748,11 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             bladerf_get_loopback(_dev, &_bladerf_loopback);
             if (_bladerf_loopback != loopback)
             {
-                SoapySDR_logf(SOAPY_SDR_INFO, "bladeRF: Loopback set '%s'", value);
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Loopback set '%s'", value.c_str());
                 int ret = bladerf_set_loopback(_dev, loopback);
                 if (ret != 0)
                 {
-                    SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_loopback(%s) returned %s", value, _err2str(ret).c_str());
+                    SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_loopback(%s) returned %s", value.c_str(), _err2str(ret).c_str());
                     throw std::runtime_error("writeSetting() " + _err2str(ret));
                 }
             }
@@ -759,7 +760,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
         else
         {
             // --> Invalid setting has arrived
-            SoapySDR_logf(SOAPY_SDR_ERROR, "bladeRF: Invalid loopback setting '%s'", value);
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid loopback setting '%s'", value.c_str());
             //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
         }
     }
