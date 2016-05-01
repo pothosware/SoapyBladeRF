@@ -1,0 +1,39 @@
+Release 0.3.1 (2016-03-01)
+==========================
+
+- Fix tx end of burst implementation in deactivateStream()
+- Clear EOB when the last sample will not be transmitted
+- Implemented masked GPIO write based on v1.5.0 API
+
+Release 0.3.0 (2015-11-20)
+==========================
+
+- Implemented getStreamFormats() for SoapySDR v0.4
+- Implemented getNativeStreamFormat() for SoapySDR v0.4
+- Implemented getStreamArgsInfo() for SoapySDR v0.4
+
+Release 0.2.0 (2015-10-10)
+==========================
+
+- Added GPIO access hooks for CONFIG and EXPANSION bank
+
+Release 0.1.2 (2015-09-16)
+==========================
+
+- Return SOAPY_SDR_NOT_SUPPORTED for RX readStreamStatus()
+- Fix readStreamStatus() timeout infinite loop condition
+
+Release 0.1.1 (2015-08-15)
+==========================
+
+- Fix undefined behavior with bladerf_sync_rx() minimum timeout
+- Clip read/write number of samples to conversion buffer size
+- Arbitrary sized conversion buffers based on buffer size
+- Fix find function serial string to use null terminator
+- Support use of BLADERF_META_FLAG_TX_UPDATE_TIMESTAMP flag
+- Remove BLADERF_META_FLAG_TX_BURST_END padding (2015.07)
+
+Release 0.1.0 (2015-07-14)
+==========================
+
+- Initial release of Soapy BladeRF support module
