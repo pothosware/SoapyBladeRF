@@ -1,4 +1,4 @@
-Release 0.3.2 (pending)
+Release 0.3.2 (2016-05-20)
 ==========================
 
 - Added settings hooks for xb200 support
