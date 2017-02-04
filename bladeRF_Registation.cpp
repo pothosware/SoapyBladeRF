@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2016 Josh Blum
+ * Copyright (C) 2015-2017 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,16 +31,19 @@ static SoapySDR::Kwargs devinfo_to_kwargs(const bladerf_devinfo &info)
     SoapySDR::Kwargs args;
 
     args["backend"] = bladerf_backend_str(info.backend);
-
-    char deviceStr[100];
-    sprintf(deviceStr, "0x%02X:0x%02X", int(info.usb_bus), int(info.usb_addr));
-    args["device"] = deviceStr;
-
-    char instanceStr[100];
-    sprintf(instanceStr, "%u", info.instance);
-    args["instance"] = instanceStr;
-
     args["serial"] = std::string(info.serial);
+
+    char buff[100];
+    int r = std::sprintf(buff, "0x%02X:0x%02X", int(info.usb_bus), int(info.usb_addr));
+    if (r > 0) args["device"] = std::string(buff, r);
+
+    r = std::sprintf(buff, "%u", info.instance);
+    if (r > 0) args["instance"] = std::string(buff, r);
+
+    std::string shortSerial(std::string(info.serial));
+    shortSerial.replace(8, 16, "//");
+    args["label"] = "BladeRF #" + args["instance"] + " " + shortSerial;
+
     return args;
 }
 

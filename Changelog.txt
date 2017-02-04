@@ -1,6 +1,7 @@
 Release 0.3.3 (pending)
 ==========================
 
+- Added label convention to bladerf discovery routine
 - Update debian files for SoapySDR module ABI format
 
 Release 0.3.2 (2016-05-20)
