@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2016 Josh Blum
+ * Copyright (C) 2015-2017 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,14 +22,8 @@
 #include "bladeRF_SoapySDR.hpp"
 #include <SoapySDR/Logger.hpp>
 #include <stdexcept>
-
-//cross platform usleep()
-#ifdef _MSC_VER
-#include <windows.h>
-#define usleep(t) Sleep((t)/1000)
-#else
-#include <unistd.h>
-#endif
+#include <thread>
+#include <chrono>
 
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
@@ -460,8 +454,8 @@ int bladeRF_SoapySDR::readStreamStatus(
 
     //wait for an event to be ready considering the timeout and time
     //this is an emulation by polling and waiting on the hardware time
-    long long timeNowNs = this->getHardwareTime();
-    const long long exitTimeNs = timeNowNs + (timeoutUs*1000);
+    auto timeNow = std::chrono::high_resolution_clock::now();
+    const auto exitTime = timeNow + std::chrono::microseconds(timeoutUs);
     while (true)
     {
         //no status to report, sleep for a bit
@@ -471,15 +465,15 @@ int bladeRF_SoapySDR::readStreamStatus(
         if ((_txResps.front().flags & SOAPY_SDR_HAS_TIME) == 0) break;
 
         //current status time expired, done waiting...
-        if (_txResps.front().timeNs < timeNowNs) break;
+        //if (_txResps.front().timeNs < timeNowNs) break;
 
         //sleep a bit, never more than time remaining
         pollSleep:
-        usleep(std::min<long>(1000, (exitTimeNs-timeNowNs)/1000));
+        std::this_thread::sleep_until(std::min(timeNow+std::chrono::microseconds(1000), exitTime));
 
         //check for timeout expired
-        timeNowNs = this->getHardwareTime();
-        if (exitTimeNs < timeNowNs) return SOAPY_SDR_TIMEOUT;
+        timeNow = std::chrono::high_resolution_clock::now();
+        if (exitTime < timeNow) return SOAPY_SDR_TIMEOUT;
     }
 
     //extract the most recent status event
