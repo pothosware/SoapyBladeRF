@@ -41,8 +41,8 @@ static SoapySDR::Kwargs devinfo_to_kwargs(const bladerf_devinfo &info)
     if (r > 0) args["instance"] = std::string(buff, r);
 
     std::string shortSerial(std::string(info.serial));
-    shortSerial.replace(8, 16, "//");
-    args["label"] = "BladeRF #" + args["instance"] + " " + shortSerial;
+    shortSerial.replace(8, 16, "..");
+    args["label"] = "BladeRF #" + args["instance"] + " [" + shortSerial + "]";
 
     return args;
 }
