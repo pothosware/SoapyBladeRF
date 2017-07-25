@@ -214,6 +214,8 @@ public:
 
     void writeSetting(const std::string &key, const std::string &value);
 
+    std::string readSetting(const std::string &key) const;
+
     /*******************************************************************
      * GPIO API
      ******************************************************************/
@@ -307,6 +309,9 @@ private:
     long _rxMinTimeoutMs;
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;
+    std::string _xb200Mode;
+    std::string _samplingMode;
+    std::string _loopbackMode;
 
     bladerf *_dev;
 };

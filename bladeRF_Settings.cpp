@@ -42,7 +42,11 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _rxBuffSize(0),
     _txBuffSize(0),
     _rxMinTimeoutMs(0),
-    _dev(NULL)
+    _dev(NULL),
+    _xb200Mode(""),
+    _samplingMode(""),
+    _loopbackMode("")
+
 {
     bladerf_devinfo info = devinfo;
     SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_open_with_devinfo()");
@@ -534,6 +538,20 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     return setArgs;
 }
 
+std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
+{
+    if (key == "xb200") {
+        return _xb200Mode;
+    } else if (key == "sampling_mode") {
+        return _samplingMode;
+    } else if (key == "loopback") {
+        return _loopbackMode;
+    }
+
+    SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
+    return "";
+}
+
 void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &value)
 {
     if (key == "xb200")
@@ -543,6 +561,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
         if (std::find(std::begin(xb200_validSettings), std::end(xb200_validSettings), value) != std::end(xb200_validSettings))
         {
             // --> Valid setting has arrived
+            _xb200Mode = value;
 
             // Get attached expansion device
             bladerf_xb _bladerf_xb_attached = bladerf_xb::BLADERF_XB_NONE;
@@ -657,6 +676,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
         if (std::find(std::begin(sampling_mode_validSettings), std::end(sampling_mode_validSettings), value) != std::end(sampling_mode_validSettings))
         {
             // --> Valid setting has arrived
+            _samplingMode = value;
 
             // Set the sampling mode
             int ret = 0;
@@ -692,6 +712,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
         if (std::find(std::begin(loopback_validSettings), std::end(loopback_validSettings), value) != std::end(loopback_validSettings))
         {
             // --> Valid setting has arrived
+            _loopbackMode = value;
 
             // Which loopback mode was selected?
             bladerf_loopback loopback = bladerf_loopback::BLADERF_LB_NONE;
