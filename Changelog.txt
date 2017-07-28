@@ -1,3 +1,8 @@
+Release 0.3.4 (pending)
+==========================
+
+- Added readback support for arbitrary settings API
+
 Release 0.3.3 (2017-04-29)
 ==========================
 
