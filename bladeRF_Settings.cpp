@@ -135,6 +135,130 @@ std::string bladeRF_SoapySDR::getAntenna(const int direction, const size_t chann
 }
 
 /*******************************************************************
+ * Calibration API
+ ******************************************************************/
+
+bool bladeRF_SoapySDR::hasDCOffset(const int, const size_t) const
+{
+    return true;
+}
+
+void bladeRF_SoapySDR::setDCOffset(const int direction, const size_t, const std::complex<double> &offset)
+{
+    int ret = 0;
+    int16_t i = 0;
+    int16_t q = 0;
+
+    if (offset.real() > 1.0)
+        i = int16_t(1.0 * 2048);
+    else
+        i = int16_t(offset.real() * 2048);
+
+    if (offset.imag() > 1.0)
+        q = int16_t(1.0 * 2048);
+    else
+        q = int16_t(offset.imag() * 2048);
+
+    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_I, i);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", i, _err2str(ret).c_str());
+        throw std::runtime_error("setDCOffset() " + _err2str(ret));
+    }
+
+    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_Q, q);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", q, _err2str(ret).c_str());
+        throw std::runtime_error("setDCOffset() " + _err2str(ret));
+    }
+}
+
+std::complex<double> bladeRF_SoapySDR::getDCOffset(const int direction, const size_t) const
+{
+    int ret = 0;
+    int16_t i = 0;
+    int16_t q = 0;
+
+    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_I, &i);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getDCOffset() " + _err2str(ret));
+    }
+
+    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_Q, &q);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getDCOffset() " + _err2str(ret));
+    }
+
+    std::complex<double> z(i / 2048.0f, q / 2048.0f);
+    return z;
+}
+
+bool bladeRF_SoapySDR::hasIQBalance(const int, const size_t) const
+{
+    return true;
+}
+
+void bladeRF_SoapySDR::setIQBalance(const int direction, const size_t, const std::complex<double> &balance)
+{
+    int ret = 0;
+    int16_t gain = 0;
+    int16_t phase = 0;
+
+    if (balance.real() > 1.0)
+        gain = int16_t(1.0 * 4096);
+    else
+        gain = int16_t(balance.real() * 4096);
+
+    if (balance.imag() > 1.0)
+        phase = int16_t(1.0 * 4096);
+    else
+        phase = int16_t(balance.imag() * 4096);
+
+    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_GAIN, gain);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", gain, _err2str(ret).c_str());
+        throw std::runtime_error("setIQBalance() " + _err2str(ret));
+    }
+
+    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_PHASE, phase);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", phase, _err2str(ret).c_str());
+        throw std::runtime_error("setIQBalance() " + _err2str(ret));
+    }
+}
+
+std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const size_t) const
+{
+    int ret = 0;
+    int16_t gain = 0;
+    int16_t phase = 0;
+
+    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_GAIN, &gain);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getIQBalance() " + _err2str(ret));
+    }
+
+    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_PHASE, &phase);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getIQBalance() " + _err2str(ret));
+    }
+
+    std::complex<double> z(gain / 4096.0f, phase / 4096.0f);
+    return z;
+}
+
+/*******************************************************************
  * Gain API
  ******************************************************************/
 

@@ -147,6 +147,22 @@ public:
     std::string getAntenna(const int direction, const size_t channel) const;
 
     /*******************************************************************
+     * Calibration API
+     ******************************************************************/
+
+    bool hasDCOffset(const int direction, const size_t) const;
+
+    void setDCOffset(const int direction, const size_t, const std::complex<double> &offset);
+
+    std::complex<double> getDCOffset(const int direction, const size_t) const;
+
+    bool hasIQBalance(const int direction, const size_t) const;
+
+    void setIQBalance(const int direction, const size_t, const std::complex<double> &balance);
+
+    std::complex<double> getIQBalance(const int direction, const size_t) const;
+
+    /*******************************************************************
      * Gain API
      ******************************************************************/
 
