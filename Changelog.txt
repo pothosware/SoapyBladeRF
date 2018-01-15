@@ -1,6 +1,7 @@
 Release 0.3.4 (pending)
 ==========================
 
+- Support for setting the gain mode (hardware AGC)
 - Support for DC offset and IQ imbalance corrections
 - Added readback support for arbitrary settings API
 
