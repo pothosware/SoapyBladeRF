@@ -1,3 +1,9 @@
+soapybladerf (0.3.4-1) unstable; urgency=low
+
+  * Release 0.3.4 (2018-01-16)
+
+ -- Josh Blum <josh@pothosware.com>  Tue, 16 Jan 2018 20:29:57 -0000
+
 soapybladerf (0.3.3-1) unstable; urgency=low
 
   * Release 0.3.3 (2017-04-29)
