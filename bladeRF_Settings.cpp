@@ -274,9 +274,10 @@ bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t) const
 void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool automatic)
 {
     #ifdef HAS_BLADERF_GAIN_MODE
+    if (direction == SOAPY_SDR_TX) return; //not supported on tx
     bladerf_gain_mode gain_mode = automatic ? BLADERF_GAIN_AUTOMATIC : BLADERF_GAIN_MANUAL;
     const int ret = bladerf_set_gain_mode(_dev, _dir2mod(direction), gain_mode);
-    if (ret != 0)
+    if (ret != 0 and automatic) //only throw when mode is automatic, manual is default even when call bombs
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_mode(%s) returned %s", automatic?"automatic":"manual", _err2str(ret).c_str());
         throw std::runtime_error("setGainMode() " + _err2str(ret));
@@ -287,6 +288,7 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool
 bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t) const
 {
     #ifdef HAS_BLADERF_GAIN_MODE
+    if (direction == SOAPY_SDR_TX) return false; //not supported on tx
     int ret = 0;
     bladerf_gain_mode gain_mode;
     bool automatic;
