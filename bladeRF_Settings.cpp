@@ -278,7 +278,7 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool
     const int ret = bladerf_set_gain_mode(_dev, _dir2mod(direction), gain_mode);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_mode(%f) returned %s", gain_mode, _err2str(ret).c_str());
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_mode(%s) returned %s", automatic?"automatic":"manual", _err2str(ret).c_str());
         throw std::runtime_error("setGainMode() " + _err2str(ret));
     }
     #endif

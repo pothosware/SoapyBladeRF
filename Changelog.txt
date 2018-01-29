@@ -1,6 +1,7 @@
 Release 0.3.5 (pending)
 ==========================
 
+- Fixed formatting for setGainMode error message
 - Conditional check for bladerf gain mode support
 
 Release 0.3.4 (2018-01-16)
