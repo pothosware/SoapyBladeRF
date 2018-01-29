@@ -264,11 +264,16 @@ std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const s
 
 bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t) const
 {
+    #ifdef HAS_BLADERF_GAIN_MODE
     return _dir2mod(direction) == BLADERF_MODULE_RX ? true : false;
+    #else
+    return false;
+    #endif
 }
 
 void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool automatic)
 {
+    #ifdef HAS_BLADERF_GAIN_MODE
     bladerf_gain_mode gain_mode = automatic ? BLADERF_GAIN_AUTOMATIC : BLADERF_GAIN_MANUAL;
     const int ret = bladerf_set_gain_mode(_dev, _dir2mod(direction), gain_mode);
     if (ret != 0)
@@ -276,10 +281,12 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_mode(%f) returned %s", gain_mode, _err2str(ret).c_str());
         throw std::runtime_error("setGainMode() " + _err2str(ret));
     }
+    #endif
 }
 
 bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t) const
 {
+    #ifdef HAS_BLADERF_GAIN_MODE
     int ret = 0;
     bladerf_gain_mode gain_mode;
     bool automatic;
@@ -292,6 +299,9 @@ bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t) const
 
     automatic = gain_mode == BLADERF_GAIN_AUTOMATIC ? true : false;
     return automatic;
+    #else
+    return false;
+    #endif
 }
 
 std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t) const
