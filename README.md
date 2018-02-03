@@ -1,15 +1,15 @@
 # Soapy SDR plugin for Blade RF
 
-##Build Status
+## Build Status
 
 - Travis: [![Travis Build Status](https://travis-ci.org/pothosware/SoapyBladeRF.svg?branch=master)](https://travis-ci.org/pothosware/SoapyBladeRF)
 
-##Dependencies
+## Dependencies
 
 * SoapySDR - https://github.com/pothosware/SoapySDR/wiki
 * LibBladeRF - http://www.github.com/nuand/bladeRF
 
-##Documentation
+## Documentation
 
 * https://github.com/pothosware/SoapyBladeRF/wiki
 
