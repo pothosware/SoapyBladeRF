@@ -703,6 +703,18 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
 
     setArgs.push_back(lookbackArg);
 
+    // Device reset
+    SoapySDR::ArgInfo resetArg;
+    resetArg.key = "reset";
+    resetArg.value = "true";
+    resetArg.name = "Reset Device";
+    resetArg.description = "Reset the device, causing it to reload its firmware from flash.";
+    resetArg.type = SoapySDR::ArgInfo::STRING;
+    resetArg.options.push_back("true");
+    resetArg.optionNames.push_back("True");
+
+    setArgs.push_back(resetArg);
+
     return setArgs;
 }
 
@@ -714,6 +726,8 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         return _samplingMode;
     } else if (key == "loopback") {
         return _loopbackMode;
+    } else if (key == "reset") {
+        return "";
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
@@ -951,6 +965,24 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid loopback setting '%s'", value.c_str());
             //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
+        }
+    }
+    else if (key == "reset")
+    {
+        // Verify that a valid setting has arrived
+        if (value == "true") {
+            // --> Valid setting has arrived
+            int ret = bladerf_device_reset(_dev);
+            if (ret != 0)
+            {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_device_reset(%s) returned %s", value.c_str(),
+                               _err2str(ret).c_str());
+                throw std::runtime_error("writeSetting() " + _err2str(ret));
+            }
+        }
+        else {
+            // --> Invalid setting has arrived
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid reset setting '%s'", value.c_str());
         }
     }
     else
