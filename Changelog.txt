@@ -1,6 +1,7 @@
 Release 0.3.5 (pending)
 ==========================
 
+- Added settings hooks for device loading and programming
 - Fixed formatting for setGainMode error message
 - Conditional check for bladerf gain mode support
 
