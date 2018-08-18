@@ -63,8 +63,9 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     if (ret == 0) SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_get_serial() = %s", serialStr);
 
     //initialize the sample rates to something
-    this->setSampleRate(SOAPY_SDR_RX, 0, 1e6);
-    this->setSampleRate(SOAPY_SDR_TX, 0, 1e6);
+    this->setSampleRate(SOAPY_SDR_RX, 0, 4e6);
+    this->setSampleRate(SOAPY_SDR_TX, 0, 4e6);
+
 }
 
 bladeRF_SoapySDR::~bladeRF_SoapySDR(void)
