@@ -101,7 +101,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     {
         throw std::runtime_error("setupStream invalid channel selection");
     }
-    const auto layout = _dir2mod(direction, 0);
+    const auto layout = _toch(direction, 0);
     #else
     bladerf_channel_layout layout;
     if (channels.size() == 1 and channels.at(0) == 0)
