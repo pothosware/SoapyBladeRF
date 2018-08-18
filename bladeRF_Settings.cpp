@@ -111,6 +111,24 @@ SoapySDR::Kwargs bladeRF_SoapySDR::getHardwareInfo(void) const
 }
 
 /*******************************************************************
+ * Channels API
+ ******************************************************************/
+
+size_t bladeRF_SoapySDR::getNumChannels(const int direction) const
+{
+    #ifndef LIBBLADERF_V2
+    return 1;
+    #else
+    return bladerf_get_channel_count(_dev, (direction == SOAPY_SDR_RX)?BLADERF_RX:BLADERF_TX);
+    #endif
+}
+
+bool bladeRF_SoapySDR::getFullDuplex(const int, const size_t) const
+{
+    return true;
+}
+
+/*******************************************************************
  * Antenna API
  ******************************************************************/
 
@@ -143,7 +161,7 @@ bool bladeRF_SoapySDR::hasDCOffset(const int, const size_t) const
     return true;
 }
 
-void bladeRF_SoapySDR::setDCOffset(const int direction, const size_t, const std::complex<double> &offset)
+void bladeRF_SoapySDR::setDCOffset(const int direction, const size_t channel, const std::complex<double> &offset)
 {
     int ret = 0;
     int16_t i = 0;
@@ -159,14 +177,14 @@ void bladeRF_SoapySDR::setDCOffset(const int direction, const size_t, const std:
     else
         q = int16_t(offset.imag() * 2048);
 
-    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_I, i);
+    ret = bladerf_set_correction(_dev, _toch(direction, channel), BLADERF_CORR_LMS_DCOFF_I, i);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", i, _err2str(ret).c_str());
         throw std::runtime_error("setDCOffset() " + _err2str(ret));
     }
 
-    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_Q, q);
+    ret = bladerf_set_correction(_dev, _toch(direction, channel), BLADERF_CORR_LMS_DCOFF_Q, q);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", q, _err2str(ret).c_str());
@@ -174,20 +192,20 @@ void bladeRF_SoapySDR::setDCOffset(const int direction, const size_t, const std:
     }
 }
 
-std::complex<double> bladeRF_SoapySDR::getDCOffset(const int direction, const size_t) const
+std::complex<double> bladeRF_SoapySDR::getDCOffset(const int direction, const size_t channel) const
 {
     int ret = 0;
     int16_t i = 0;
     int16_t q = 0;
 
-    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_I, &i);
+    ret = bladerf_get_correction(_dev, _toch(direction, channel), BLADERF_CORR_LMS_DCOFF_I, &i);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getDCOffset() " + _err2str(ret));
     }
 
-    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_LMS_DCOFF_Q, &q);
+    ret = bladerf_get_correction(_dev, _toch(direction, channel), BLADERF_CORR_LMS_DCOFF_Q, &q);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
@@ -198,12 +216,12 @@ std::complex<double> bladeRF_SoapySDR::getDCOffset(const int direction, const si
     return z;
 }
 
-bool bladeRF_SoapySDR::hasIQBalance(const int, const size_t) const
+bool bladeRF_SoapySDR::hasIQBalance(const int, const size_t channel) const
 {
     return true;
 }
 
-void bladeRF_SoapySDR::setIQBalance(const int direction, const size_t, const std::complex<double> &balance)
+void bladeRF_SoapySDR::setIQBalance(const int direction, const size_t channel, const std::complex<double> &balance)
 {
     int ret = 0;
     int16_t gain = 0;
@@ -219,14 +237,14 @@ void bladeRF_SoapySDR::setIQBalance(const int direction, const size_t, const std
     else
         phase = int16_t(balance.imag() * 4096);
 
-    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_GAIN, gain);
+    ret = bladerf_set_correction(_dev, _toch(direction, channel), BLADERF_CORR_FPGA_GAIN, gain);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", gain, _err2str(ret).c_str());
         throw std::runtime_error("setIQBalance() " + _err2str(ret));
     }
 
-    ret = bladerf_set_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_PHASE, phase);
+    ret = bladerf_set_correction(_dev, _toch(direction, channel), BLADERF_CORR_FPGA_PHASE, phase);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_correction(%f) returned %s", phase, _err2str(ret).c_str());
@@ -234,20 +252,20 @@ void bladeRF_SoapySDR::setIQBalance(const int direction, const size_t, const std
     }
 }
 
-std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const size_t) const
+std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const size_t channel) const
 {
     int ret = 0;
     int16_t gain = 0;
     int16_t phase = 0;
 
-    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_GAIN, &gain);
+    ret = bladerf_get_correction(_dev, _toch(direction, channel), BLADERF_CORR_FPGA_GAIN, &gain);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getIQBalance() " + _err2str(ret));
     }
 
-    ret = bladerf_get_correction(_dev, _dir2mod(direction), BLADERF_CORR_FPGA_PHASE, &phase);
+    ret = bladerf_get_correction(_dev, _toch(direction, channel), BLADERF_CORR_FPGA_PHASE, &phase);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_correction() returned %s", _err2str(ret).c_str());
@@ -262,21 +280,21 @@ std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const s
  * Gain API
  ******************************************************************/
 
-bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t) const
+bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t channel) const
 {
     #ifdef HAS_BLADERF_GAIN_MODE
-    return _dir2mod(direction) == BLADERF_MODULE_RX ? true : false;
+    return _toch(direction, channel) == BLADERF_MODULE_RX ? true : false;
     #else
     return false;
     #endif
 }
 
-void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool automatic)
+void bladeRF_SoapySDR::setGainMode(const int direction, const size_t channel, const bool automatic)
 {
     #ifdef HAS_BLADERF_GAIN_MODE
     if (direction == SOAPY_SDR_TX) return; //not supported on tx
     bladerf_gain_mode gain_mode = automatic ? BLADERF_GAIN_AUTOMATIC : BLADERF_GAIN_MANUAL;
-    const int ret = bladerf_set_gain_mode(_dev, _dir2mod(direction), gain_mode);
+    const int ret = bladerf_set_gain_mode(_dev, _toch(direction, channel), gain_mode);
     if (ret != 0 and automatic) //only throw when mode is automatic, manual is default even when call bombs
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_mode(%s) returned %s", automatic?"automatic":"manual", _err2str(ret).c_str());
@@ -285,14 +303,14 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t, const bool
     #endif
 }
 
-bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t) const
+bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t channel) const
 {
     #ifdef HAS_BLADERF_GAIN_MODE
     if (direction == SOAPY_SDR_TX) return false; //not supported on tx
     int ret = 0;
     bladerf_gain_mode gain_mode;
     bool automatic;
-    ret = bladerf_get_gain_mode(_dev, _dir2mod(direction), &gain_mode);
+    ret = bladerf_get_gain_mode(_dev, _toch(direction, channel), &gain_mode);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_mode() returned %s", _err2str(ret).c_str());
@@ -306,7 +324,7 @@ bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t) const
     #endif
 }
 
-std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t) const
+std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t channel) const
 {
     std::vector<std::string> options;
     if (direction == SOAPY_SDR_RX) options.push_back("LNA");
@@ -315,9 +333,9 @@ std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const 
     return options;
 }
 
-void bladeRF_SoapySDR::setGain(const int direction, const size_t, const double value)
+void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const double value)
 {
-    const int ret = bladerf_set_gain(_dev, _dir2mod(direction), int(value));
+    const int ret = bladerf_set_gain(_dev, _toch(direction, channel), int(value));
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain(%f) returned %s", value, _err2str(ret).c_str());
@@ -325,7 +343,7 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t, const double v
     }
 }
 
-void bladeRF_SoapySDR::setGain(const int direction, const size_t, const std::string &name, const double value)
+void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const std::string &name, const double value)
 {
     int ret = 0;
     if (direction == SOAPY_SDR_RX and name == "LNA")
@@ -346,7 +364,7 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t, const std::str
     }
 }
 
-double bladeRF_SoapySDR::getGain(const int direction, const size_t, const std::string &name) const
+double bladeRF_SoapySDR::getGain(const int direction, const size_t channel, const std::string &name) const
 {
     int ret = 0;
     int gain = 0;
@@ -375,7 +393,7 @@ double bladeRF_SoapySDR::getGain(const int direction, const size_t, const std::s
     return gain;
 }
 
-SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t, const std::string &name) const
+SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t channel, const std::string &name) const
 {
     if (direction == SOAPY_SDR_RX and name == "LNA")  return SoapySDR::Range(0, BLADERF_LNA_GAIN_MAX_DB);
     if (direction == SOAPY_SDR_RX and name == "VGA1") return SoapySDR::Range(BLADERF_RXVGA1_GAIN_MIN, BLADERF_RXVGA1_GAIN_MAX);
@@ -389,12 +407,12 @@ SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t
  * Frequency API
  ******************************************************************/
 
-void bladeRF_SoapySDR::setFrequency(const int direction, const size_t, const std::string &name, const double frequency, const SoapySDR::Kwargs &)
+void bladeRF_SoapySDR::setFrequency(const int direction, const size_t channel, const std::string &name, const double frequency, const SoapySDR::Kwargs &)
 {
     if (name == "BB") return; //for compatibility
     if (name != "RF") throw std::runtime_error("setFrequency("+name+") unknown name");
 
-    int ret = bladerf_set_frequency(_dev, _dir2mod(direction), (unsigned int)(frequency));
+    int ret = bladerf_set_frequency(_dev, _toch(direction, channel), (unsigned int)(frequency));
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_frequency(%f) returned %s", frequency, _err2str(ret).c_str());
@@ -402,13 +420,13 @@ void bladeRF_SoapySDR::setFrequency(const int direction, const size_t, const std
     }
 }
 
-double bladeRF_SoapySDR::getFrequency(const int direction, const size_t, const std::string &name) const
+double bladeRF_SoapySDR::getFrequency(const int direction, const size_t channel, const std::string &name) const
 {
     if (name == "BB") return 0.0; //for compatibility
     if (name != "RF") throw std::runtime_error("getFrequency("+name+") unknown name");
 
-    unsigned int freq = 0;
-    int ret = bladerf_get_frequency(_dev, _dir2mod(direction), &freq);
+    bladerf_frequency freq = 0;
+    int ret = bladerf_get_frequency(_dev, _toch(direction, channel), &freq);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_frequency() returned %s", _err2str(ret).c_str());
@@ -417,14 +435,14 @@ double bladeRF_SoapySDR::getFrequency(const int direction, const size_t, const s
     return freq;
 }
 
-std::vector<std::string> bladeRF_SoapySDR::listFrequencies(const int, const size_t) const
+std::vector<std::string> bladeRF_SoapySDR::listFrequencies(const int, const size_t channel) const
 {
     std::vector<std::string> components;
     components.push_back("RF");
     return components;
 }
 
-SoapySDR::RangeList bladeRF_SoapySDR::getFrequencyRange(const int, const size_t, const std::string &name) const
+SoapySDR::RangeList bladeRF_SoapySDR::getFrequencyRange(const int, const size_t channel, const std::string &name) const
 {
     if (name == "BB") return SoapySDR::RangeList(1, SoapySDR::Range(0.0, 0.0)); //for compatibility
     if (name != "RF") throw std::runtime_error("getFrequencyRange("+name+") unknown name");
@@ -448,7 +466,7 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
     //stash the approximate hardware time so it can be restored
     const long long timeNow = this->getHardwareTime();
 
-    int ret = bladerf_set_rational_sample_rate(_dev, _dir2mod(direction), &ratRate, NULL);
+    int ret = bladerf_set_rational_sample_rate(_dev, _toch(direction, channel), &ratRate, NULL);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_rational_sample_rate(%f) returned %s", rate, _err2str(ret).c_str());
@@ -473,10 +491,10 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
     SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%d, %f MHz), actual = %f MHz", direction, rate/1e6, actual/1e6);
 }
 
-double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t) const
+double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t channel) const
 {
     bladerf_rational_rate ratRate;
-    int ret = bladerf_get_rational_sample_rate(_dev, _dir2mod(direction), &ratRate);
+    int ret = bladerf_get_rational_sample_rate(_dev, _toch(direction, channel), &ratRate);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_rational_sample_rate() returned %s", _err2str(ret).c_str());
@@ -486,7 +504,7 @@ double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t) const
     return double(ratRate.integer) + (double(ratRate.num)/double(ratRate.den));
 }
 
-std::vector<double> bladeRF_SoapySDR::listSampleRates(const int, const size_t) const
+std::vector<double> bladeRF_SoapySDR::listSampleRates(const int, const size_t channel) const
 {
     std::vector<double> options;
     for (double r = 160e3; r <= 200e3; r += 40e3) options.push_back(r);
@@ -497,18 +515,18 @@ std::vector<double> bladeRF_SoapySDR::listSampleRates(const int, const size_t) c
     return options;
 }
 
-void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t, const double bw)
+void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t channel, const double bw)
 {
     //bypass the filter when sufficiently large BW is selected
     if (bw > BLADERF_BANDWIDTH_MAX)
     {
-        bladerf_set_lpf_mode(_dev, _dir2mod(direction), BLADERF_LPF_BYPASSED);
+        bladerf_set_lpf_mode(_dev, _toch(direction, channel), BLADERF_LPF_BYPASSED);
         return;
     }
 
     //otherwise set to normal and configure the filter bandwidth
-    bladerf_set_lpf_mode(_dev, _dir2mod(direction), BLADERF_LPF_NORMAL);
-    int ret = bladerf_set_bandwidth(_dev, _dir2mod(direction), (unsigned int)(bw), NULL);
+    bladerf_set_lpf_mode(_dev, _toch(direction, channel), BLADERF_LPF_NORMAL);
+    int ret = bladerf_set_bandwidth(_dev, _toch(direction, channel), (unsigned int)(bw), NULL);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_bandwidth(%f) returned %s", bw, _err2str(ret).c_str());
@@ -516,10 +534,10 @@ void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t, const dou
     }
 }
 
-double bladeRF_SoapySDR::getBandwidth(const int direction, const size_t) const
+double bladeRF_SoapySDR::getBandwidth(const int direction, const size_t channel) const
 {
     unsigned int bw = 0;
-    int ret = bladerf_get_bandwidth(_dev, _dir2mod(direction), &bw);
+    int ret = bladerf_get_bandwidth(_dev, _toch(direction, channel), &bw);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_bandwidth() returned %s", _err2str(ret).c_str());
@@ -567,7 +585,11 @@ long long bladeRF_SoapySDR::getHardwareTime(const std::string &what) const
 {
     if (not what.empty()) return SoapySDR::Device::getHardwareTime(what);
     uint64_t ticksNow = 0;
+    #ifndef LIBBLADERF_V2
     const int ret = bladerf_get_timestamp(_dev, BLADERF_MODULE_RX, &ticksNow);
+    #else
+    const int ret = bladerf_get_timestamp(_dev, BLADERF_RX, &ticksNow);
+    #endif
 
     if (ret != 0)
     {
@@ -802,6 +824,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
 {
     if (key == "xb200")
     {
+        #ifndef LIBBLADERF_V2
         // Verify that a valid setting has arrived
         std::vector<std::string> xb200_validSettings{ "disabled", "50M", "144M", "222M", "auto1db", "auto3db", "auto", "custom" };
         if (std::find(std::begin(xb200_validSettings), std::end(xb200_validSettings), value) != std::end(xb200_validSettings))
@@ -909,6 +932,7 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid XB200 setting '%s'", value.c_str());
             //throw std::runtime_error("writeSetting(" + key + "," + value + ") unknown value");
         }
+        #endif
     }
     else if (key == "sampling_mode")
     {
