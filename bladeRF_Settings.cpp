@@ -327,10 +327,40 @@ bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t channel) co
 
 std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t channel) const
 {
+
     std::vector<std::string> options;
+
+    #ifndef LIBBLADERF_V2
     if (direction == SOAPY_SDR_RX) options.push_back("LNA");
     options.push_back("VGA1");
     options.push_back("VGA2");
+
+    #else
+    // Get board version
+    bladerf_fpga_size variant;
+    const int ret = bladerf_get_fpga_size(_dev, &variant);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret));
+        throw std::runtime_error("listGains() " + _err2str(ret));
+    }
+
+    // BladeRF2
+    if (variant == BLADERF_FPGA_A4 || variant == BLADERF_FPGA_A9)
+    {
+        if (direction == SOAPY_SDR_RX) options.push_back("FULL");
+        else options.push_back("DSA");
+    }
+
+    //BladeRF1
+    else if (variant == BLADERF_FPGA_115KLE || variant == BLADERF_FPGA_40KLE)
+    {
+        if (direction == SOAPY_SDR_RX) options.push_back("LNA");
+        options.push_back("VGA1");
+        options.push_back("VGA2");
+    }
+    #endif
+
     return options;
 }
 
