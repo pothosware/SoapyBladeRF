@@ -341,7 +341,7 @@ std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const 
     const int ret = bladerf_get_fpga_size(_dev, &variant);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret));
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
         throw std::runtime_error("listGains() " + _err2str(ret));
     }
 
@@ -376,7 +376,13 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const 
 
 void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const std::string &name, const double value)
 {
+    // Note: The BladeRF folks do not recommend using this API anymore.
+    // It may be unavailable or have unintended behavior if AGC is turned on.
+
     int ret = 0;
+
+    #ifndef LIBBLADERF_V2
+    // Compatibility for bladerf1
     if (direction == SOAPY_SDR_RX and name == "LNA")
     {
         if      (value < 1.5) ret = bladerf_set_lna_gain(_dev, BLADERF_LNA_GAIN_BYPASS);
@@ -387,12 +393,56 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const 
     else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_set_rxvga2(_dev, int(value));
     else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_set_txvga1(_dev, int(value));
     else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_set_txvga2(_dev, int(value));
+
     else throw std::runtime_error("setGain("+name+") -- unknown name");
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_vga(%f) returned %s", value, _err2str(ret).c_str());
         throw std::runtime_error("setGain("+name+") " + _err2str(ret));
     }
+
+    #else
+    bladerf_gain _value = (bladerf_gain)value;
+    bladerf_channel _channel = _toch(direction, channel);
+    bladerf_fpga_size variant;
+    ret = bladerf_get_fpga_size(_dev, &variant);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
+        throw std::runtime_error("setGain() " + _err2str(ret));
+    }
+
+    // BladeRF1 Support
+    if (variant == BLADERF_FPGA_115KLE or variant == BLADERF_FPGA_40KLE)
+    {
+        if (direction == SOAPY_SDR_RX and name == "LNA")
+        {
+            if      (value < 1.5) ret = bladerf_set_gain_stage(_dev, _channel, "lna", BLADERF_LNA_GAIN_BYPASS);
+            else if (value < 4.5) ret = bladerf_set_gain_stage(_dev, _channel, "lna", BLADERF_LNA_GAIN_MID);
+            else                  ret = bladerf_set_gain_stage(_dev, _channel, "lna", BLADERF_LNA_GAIN_MAX);
+        }
+        else if (direction == SOAPY_SDR_RX and name == "VGA1") ret = bladerf_set_gain_stage(_dev, _channel, "rxvga1", _value);
+        else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_set_gain_stage(_dev, _channel, "rxvga2", _value);
+        else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_set_gain_stage(_dev, _channel, "txvga1", _value);
+        else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_set_gain_stage(_dev, _channel, "txvga2", _value);
+        else throw std::runtime_error("setGain("+name+") -- unknown name");
+    }
+
+    // BladeRF2 Support
+    else if (variant == BLADERF_FPGA_A4 or variant == BLADERF_FPGA_A9)
+    {
+        if      (direction == SOAPY_SDR_RX and name == "FULL") ret = bladerf_set_gain_stage(_dev, _channel, "full", _value);
+        else if (direction == SOAPY_SDR_TX and name == "DSA")  ret = bladerf_set_gain_stage(_dev, _channel, "dsa", _value);
+        else throw std::runtime_error("setGain("+name+") -- unknown name");
+    }
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_stage(%f) returned %s", value, _err2str(ret).c_str());
+        throw std::runtime_error("setGain("+name+") " + _err2str(ret));
+    }
+    #endif
 }
 
 double bladeRF_SoapySDR::getGain(const int direction, const size_t channel, const std::string &name) const
