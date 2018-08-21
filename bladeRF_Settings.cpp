@@ -436,6 +436,7 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const 
         else if (direction == SOAPY_SDR_TX and name == "DSA")  ret = bladerf_set_gain_stage(_dev, _channel, "dsa", _value);
         else throw std::runtime_error("setGain("+name+") -- unknown name");
     }
+    else throw std::runtime_error("setGain("+name+") -- unknown board type");
 
     if (ret != 0)
     {
@@ -445,9 +446,22 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const 
     #endif
 }
 
+double bladeRF_SoapySDR::getGain(const int direction, const size_t channel) const
+{
+    bladerf_gain gain;
+    const int ret = bladerf_get_gain(_dev, _toch(direction, channel), &gain);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain(%zu) returned %s", channel, _err2str(ret).c_str());
+        throw std::runtime_error("getGain() " + _err2str(ret));
+    }
+    return (double)gain;
+}
+
 double bladeRF_SoapySDR::getGain(const int direction, const size_t channel, const std::string &name) const
 {
     int ret = 0;
+    #ifndef LIBBLADERF_V2
     int gain = 0;
     if (direction == SOAPY_SDR_RX and name == "LNA")
     {
@@ -466,11 +480,61 @@ double bladeRF_SoapySDR::getGain(const int direction, const size_t channel, cons
     else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_get_txvga1(_dev, &gain);
     else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_get_txvga2(_dev, &gain);
     else throw std::runtime_error("getGain("+name+") -- unknown name");
+    #else
+
+    bladerf_gain gain;
+    bladerf_channel _channel = _toch(direction, channel);
+    bladerf_fpga_size variant;
+    ret = bladerf_get_fpga_size(_dev, &variant);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
+        throw std::runtime_error("setGain() " + _err2str(ret));
+    }
+
+    // BladeRF1 Support
+    if (variant == BLADERF_FPGA_115KLE or variant == BLADERF_FPGA_40KLE)
+    {
+
+        if (direction == SOAPY_SDR_RX and name == "LNA")
+        {
+            ret = bladerf_get_gain_stage(_dev, channel, "lna", &gain);
+            switch (gain)
+            {
+            case BLADERF_LNA_GAIN_UNKNOWN: gain = 0; break;
+            case BLADERF_LNA_GAIN_BYPASS: gain = 0; break;
+            case BLADERF_LNA_GAIN_MID: gain = BLADERF_LNA_GAIN_MID_DB; break;
+            case BLADERF_LNA_GAIN_MAX: gain = BLADERF_LNA_GAIN_MAX_DB; break;
+            }
+        }
+        else if (direction == SOAPY_SDR_RX and name == "VGA1") ret = bladerf_get_gain_stage(_dev, channel, "rxvga1", &gain);
+        else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_get_gain_stage(_dev, channel, "rxvga2", &gain);
+        else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_get_gain_stage(_dev, channel, "txvga1", &gain);
+        else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_get_gain_stage(_dev, channel, "txvga2", &gain);
+        else throw std::runtime_error("getGain("+name+") -- unknown name");
+    }
+
+    // BladeRF2 Support
+    else if (variant == BLADERF_FPGA_A4 or variant == BLADERF_FPGA_A9)
+    {
+        if      (direction == SOAPY_SDR_RX and name == "FULL") ret = bladerf_get_gain_stage(_dev, _channel, "full", &gain);
+        else if (direction == SOAPY_SDR_TX and name == "DSA")  ret = bladerf_get_gain_stage(_dev, _channel, "dsa", &gain);
+        // if      (direction == SOAPY_SDR_RX) ret = bladerf_get_gain(_dev, _channel, &gain);
+        // else if (direction == SOAPY_SDR_TX) ret = bladerf_get_gain(_dev, _channel, &gain);
+        else throw std::runtime_error("setGain("+name+") -- unknown name");
+    }
+    else throw std::runtime_error("setGain("+name+") -- unknown board type");
+    gain = (double)gain;
+
+    #endif
+
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_vga() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getGain("+name+") " + _err2str(ret));
     }
+
     return gain;
 }
 
