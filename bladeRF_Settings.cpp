@@ -284,7 +284,11 @@ std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const s
 bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t channel) const
 {
     #ifdef HAS_BLADERF_GAIN_MODE
+    #   ifndef LIBBLADERF_V2
     return _toch(direction, channel) == BLADERF_MODULE_RX ? true : false;
+    #   else
+    return _toch(direction, channel) == BLADERF_CHANNEL_RX(channel) ? true : false;
+    #   endif
     #else
     return false;
     #endif
