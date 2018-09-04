@@ -69,10 +69,7 @@ public:
         return "bladeRF";
     }
 
-    std::string getHardwareKey(void) const
-    {
-        return "bladeRF";
-    }
+    std::string getHardwareKey(void) const;
 
     SoapySDR::Kwargs getHardwareInfo(void) const;
 

@@ -77,6 +77,14 @@ bladeRF_SoapySDR::~bladeRF_SoapySDR(void)
 /*******************************************************************
  * Identification API
  ******************************************************************/
+std::string bladeRF_SoapySDR::getHardwareKey(void) const
+{
+    #ifndef LIBBLADERF_V2
+    return "bladeRF";
+    #else
+    return bladerf_get_board_name(_dev);
+    #endif
+}
 
 SoapySDR::Kwargs bladeRF_SoapySDR::getHardwareInfo(void) const
 {
@@ -846,6 +854,8 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
 {
     SoapySDR::ArgInfoList setArgs;
 
+    const bool isBladeRF1 = this->getNumChannels(SOAPY_SDR_RX) == 1;
+
     // XB200 setting
     SoapySDR::ArgInfo xb200SettingArg;
     xb200SettingArg.key = "xb200";
@@ -870,7 +880,7 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     xb200SettingArg.options.push_back("custom");
     xb200SettingArg.optionNames.push_back("Filterbank: Custom");
 
-    setArgs.push_back(xb200SettingArg);
+    if (isBladeRF1) setArgs.push_back(xb200SettingArg);
 
     // Sampling mode
     SoapySDR::ArgInfo samplingModeArg;
@@ -884,9 +894,10 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     samplingModeArg.options.push_back("external");
     samplingModeArg.optionNames.push_back("Direct Sampling");
 
-    setArgs.push_back(samplingModeArg);
+    if (isBladeRF1) setArgs.push_back(samplingModeArg);
 
     // Loopback
+    #ifndef LIBBLADERF_V2
     SoapySDR::ArgInfo lookbackArg;
     lookbackArg.key = "loopback";
     lookbackArg.value = "disabled";
@@ -911,6 +922,21 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     lookbackArg.optionNames.push_back("RF: TXMIX to LNA2");
     lookbackArg.options.push_back("rf_lna3");
     lookbackArg.optionNames.push_back("RF: TXMIX to LNA3");
+    #else
+    SoapySDR::ArgInfo lookbackArg;
+    lookbackArg.key = "loopback";
+    lookbackArg.value = std::to_string(int(BLADERF_LB_NONE));
+    lookbackArg.name = "Loopback Mode";
+    lookbackArg.description = "Enable/disable internal loopback";
+    lookbackArg.type = SoapySDR::ArgInfo::INT;
+    const bladerf_loopback_modes *modes(nullptr);
+    const int numModes = bladerf_get_loopback_modes(_dev, &modes);
+    if (modes and numModes > 0) for (int i = 0; i < numModes; i++)
+    {
+        lookbackArg.options.push_back(std::to_string(int(modes[i].mode)));
+        lookbackArg.optionNames.push_back(modes[i].name);
+    }
+    #endif
 
     setArgs.push_back(lookbackArg);
 
@@ -990,7 +1016,13 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
     } else if (key == "sampling_mode") {
         return _samplingMode;
     } else if (key == "loopback") {
+        #ifndef LIBBLADERF_V2
         return _loopbackMode;
+        #else
+        bladerf_loopback lb;
+        bladerf_get_loopback(_dev, &lb);
+        return std::to_string(int(lb));
+        #endif
     } else if (key == "reset") {
         return "";
     } else if (key == "erase_stored_fpga") {
@@ -1166,12 +1198,9 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
     }
     else if (key == "loopback")
     {
+        #ifndef LIBBLADERF_V2
         // Verify that a valid setting has arrived
-        #ifdef LIBBLADERF_V2
-        std::vector<std::string> loopback_validSettings{ "disabled", "firmware", "bb_txlpf_rxvga2", "bb_txvga1_rxvga2", "bb_txlpf_rxlpf", "bb_txvga1_rxlpf", "rf_lna1", "rf_lna2", "rf_lna3", "rfic_bist"};
-        #else
-        std::vector<std::string> loopback_validSettings{ "disabled", "firmware", "bb_txlpf_rxvga2", "bb_txvga1_rxvga2", "bb_txlpf_rxlpf", "bb_txvga1_rxlpf", "rf_lna1", "rf_lna2", "rf_lna3"};
-        #endif
+        std::vector<std::string> loopback_validSettings{ "disabled", "firmware", "bb_txlpf_rxvga2", "bb_txvga1_rxvga2", "bb_txlpf_rxlpf", "bb_txvga1_rxlpf", "rf_lna1", "rf_lna2", "rf_lna3" };
         if (std::find(std::begin(loopback_validSettings), std::end(loopback_validSettings), value) != std::end(loopback_validSettings))
         {
             // --> Valid setting has arrived
@@ -1220,45 +1249,30 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 // RF loopback. The TXMIX output, through the AUX PA, is connected to the output of LNA3.
                 loopback = bladerf_loopback::BLADERF_LB_RF_LNA3;
             }
-            #ifdef LIBBLADERF_V2
-            else if (value == "rfic_bist")
-            {
-                // RF IC Built In Self Test loopback.
-                loopback = bladerf_loopback::BLADERF_LB_RFIC_BIST;
-            }
-            #endif
             else
             {
                 // Default: Disabled
                 // Disables loopback and returns to normal operation
                 loopback = bladerf_loopback::BLADERF_LB_NONE;
             }
-            #ifdef LIBBLADERF_V2
-            // Check if the loopback mode is supported by the board
-            if (bladerf_is_loopback_mode_supported(_dev, loopback))
-            #else
-            if (true)
-            #endif
-            {
+        #else
+        auto loopback = bladerf_loopback(std::stoi(value));
+        if (bladerf_is_loopback_mode_supported(_dev, loopback))
+        {
+        #endif
 
-                // If the loopback isn't already set, set the loopback
-                bladerf_loopback _bladerf_loopback = bladerf_loopback::BLADERF_LB_NONE;
-                bladerf_get_loopback(_dev, &_bladerf_loopback);
-                if (_bladerf_loopback != loopback)
-                {
-                    SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Loopback set '%s'", value.c_str());
-                    int ret = bladerf_set_loopback(_dev, loopback);
-                    if (ret != 0)
-                    {
-                        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_loopback(%s) returned %s", value.c_str(), _err2str(ret).c_str());
-                        throw std::runtime_error("writeSetting() " + _err2str(ret));
-                    }
-                }
-            }
-            else
+            // If the loopback isn't already set, set the loopback
+            bladerf_loopback _bladerf_loopback = bladerf_loopback::BLADERF_LB_NONE;
+            bladerf_get_loopback(_dev, &_bladerf_loopback);
+            if (_bladerf_loopback != loopback)
             {
-              // --> Invalid setting has arrived
-              SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Loopback setting '%s' not available on this device.", value.c_str());
+                SoapySDR::logf(SOAPY_SDR_INFO, "bladeRF: Loopback set '%s'", value.c_str());
+                int ret = bladerf_set_loopback(_dev, loopback);
+                if (ret != 0)
+                {
+                    SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_loopback(%s) returned %s", value.c_str(), _err2str(ret).c_str());
+                    throw std::runtime_error("writeSetting() " + _err2str(ret));
+                }
             }
         }
         else
