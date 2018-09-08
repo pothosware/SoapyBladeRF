@@ -27,6 +27,14 @@
 #include <cstdio>
 #include <queue>
 
+#if defined(LIBBLADERF_API_VERSION) && (LIBBLADERF_API_VERSION >= 0x02000000)
+#define LIBBLADERF_V2
+#endif
+
+#ifndef LIBBLADERF_V2
+typedef unsigned int bladerf_frequency;
+#endif
+
 /*!
  * Storage for rx commands and tx responses
  */
@@ -61,10 +69,7 @@ public:
         return "bladeRF";
     }
 
-    std::string getHardwareKey(void) const
-    {
-        return "bladeRF";
-    }
+    std::string getHardwareKey(void) const;
 
     SoapySDR::Kwargs getHardwareInfo(void) const;
 
@@ -72,15 +77,9 @@ public:
      * Channels API
      ******************************************************************/
 
-    size_t getNumChannels(const int) const
-    {
-        return 1;
-    }
+    size_t getNumChannels(const int) const;
 
-    bool getFullDuplex(const int, const size_t) const
-    {
-        return true;
-    }
+    bool getFullDuplex(const int, const size_t) const;
 
     /*******************************************************************
      * Stream API
@@ -178,6 +177,8 @@ public:
 
     void setGain(const int direction, const size_t channel, const std::string &name, const double value);
 
+    double getGain(const int direction, const size_t channel) const;
+
     double getGain(const int direction, const size_t channel, const std::string &name) const;
 
     SoapySDR::Range getGainRange(const int direction, const size_t channel, const std::string &name) const;
@@ -258,10 +259,17 @@ public:
 
 private:
 
-    static bladerf_module _dir2mod(const int direction)
+    #ifndef LIBBLADERF_V2
+    static bladerf_module _toch(const int direction, const size_t)
     {
         return (direction == SOAPY_SDR_RX)?BLADERF_MODULE_RX:BLADERF_MODULE_TX;
     }
+    #else
+    static bladerf_channel _toch(const int direction, const size_t channel)
+    {
+        return (direction == SOAPY_SDR_RX)?BLADERF_CHANNEL_RX(channel):BLADERF_CHANNEL_TX(channel);
+    }
+    #endif
 
     static std::string _err2str(const int err)
     {

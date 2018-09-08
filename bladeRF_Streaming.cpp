@@ -89,14 +89,34 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_
 SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     const int direction,
     const std::string &format,
-    const std::vector<size_t> &channels,
+    const std::vector<size_t> &channels_,
     const SoapySDR::Kwargs &args)
 {
+    auto channels = channels_;
+    if (channels.empty()) channels.push_back(0);
+
     //check the channel configuration
+    #ifndef LIBBLADERF_V2
     if (channels.size() > 1 or (channels.size() > 0 and channels.at(0) != 0))
     {
         throw std::runtime_error("setupStream invalid channel selection");
     }
+    const auto layout = _toch(direction, 0);
+    #else
+    bladerf_channel_layout layout;
+    if (channels.size() == 1 and channels.at(0) == 0)
+    {
+        layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X1:BLADERF_TX_X1;
+    }
+    else if (channels.size() == 2 and channels.at(0) == 0 and channels.at(1) == 1)
+    {
+        layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X2:BLADERF_TX_X2;
+    }
+    else
+    {
+        throw std::runtime_error("setupStream invalid channel selection");
+    }
+    #endif
 
     //check the format
     if (format == "CF32") {}
@@ -122,7 +142,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     //setup the stream for sync tx/rx calls
     int ret = bladerf_sync_config(
         _dev,
-        _dir2mod(direction),
+        layout,
         BLADERF_FORMAT_SC16_Q11_META,
         numBuffs,
         bufSize,
@@ -135,7 +155,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     }
 
     //activate the stream here -- only call once
-    ret = bladerf_enable_module(_dev, _dir2mod(direction), true);
+    ret = bladerf_enable_module(_dev, _toch(direction, 0), true);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(true) returned %d", ret);
@@ -166,7 +186,7 @@ void bladeRF_SoapySDR::closeStream(SoapySDR::Stream *stream)
     const int direction = *reinterpret_cast<int *>(stream);
 
     //deactivate the stream here -- only call once
-    const int ret = bladerf_enable_module(_dev, _dir2mod(direction), false);
+    const int ret = bladerf_enable_module(_dev, _toch(direction, 0), false);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(false) returned %s", _err2str(ret).c_str());
@@ -384,7 +404,11 @@ int bladeRF_SoapySDR::writeStream(
         else
         {
             md.flags |= BLADERF_META_FLAG_TX_NOW;
+            #ifndef LIBBLADERF_V2
             bladerf_get_timestamp(_dev, BLADERF_MODULE_TX, &md.timestamp);
+            #else
+            bladerf_get_timestamp(_dev, BLADERF_TX, &md.timestamp);
+            #endif
         }
         _txNextTicks = md.timestamp;
     }
