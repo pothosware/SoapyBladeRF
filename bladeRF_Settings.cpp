@@ -925,16 +925,15 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     #else
     SoapySDR::ArgInfo lookbackArg;
     lookbackArg.key = "loopback";
-    lookbackArg.value = std::to_string(int(BLADERF_LB_NONE));
     lookbackArg.name = "Loopback Mode";
     lookbackArg.description = "Enable/disable internal loopback";
-    lookbackArg.type = SoapySDR::ArgInfo::INT;
+    lookbackArg.type = SoapySDR::ArgInfo::STRING;
     const bladerf_loopback_modes *modes(nullptr);
     const int numModes = bladerf_get_loopback_modes(_dev, &modes);
     if (modes and numModes > 0) for (int i = 0; i < numModes; i++)
     {
-        lookbackArg.options.push_back(std::to_string(int(modes[i].mode)));
-        lookbackArg.optionNames.push_back(modes[i].name);
+        if (modes[i].mode == BLADERF_LB_NONE) lookbackArg.value = modes[i].name;
+        lookbackArg.options.push_back(modes[i].name);
     }
     #endif
 
@@ -1021,7 +1020,13 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         #else
         bladerf_loopback lb;
         bladerf_get_loopback(_dev, &lb);
-        return std::to_string(int(lb));
+        const bladerf_loopback_modes *modes(nullptr);
+        const int numModes = bladerf_get_loopback_modes(_dev, &modes);
+        if (modes and numModes > 0) for (int i = 0; i < numModes; i++)
+        {
+            if (modes[i].mode == lb) return modes[i].name;
+        }
+        return "unknown";
         #endif
     } else if (key == "reset") {
         return "";
@@ -1256,7 +1261,13 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 loopback = bladerf_loopback::BLADERF_LB_NONE;
             }
         #else
-        auto loopback = bladerf_loopback(std::stoi(value));
+        bladerf_loopback loopback(BLADERF_LB_NONE);
+        const bladerf_loopback_modes *modes(nullptr);
+        const int numModes = bladerf_get_loopback_modes(_dev, &modes);
+        if (modes and numModes > 0) for (int i = 0; i < numModes; i++)
+        {
+            if (modes[i].name == value) loopback = modes[i].mode;
+        }
         if (bladerf_is_loopback_mode_supported(_dev, loopback))
         {
         #endif
