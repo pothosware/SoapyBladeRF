@@ -945,9 +945,11 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     resetArg.value = "true";
     resetArg.name = "Reset Device";
     resetArg.description = "Reset the device, causing it to reload its firmware from flash.";
-    resetArg.type = SoapySDR::ArgInfo::STRING;
+    resetArg.type = SoapySDR::ArgInfo::BOOL;
     resetArg.options.push_back("true");
     resetArg.optionNames.push_back("True");
+    resetArg.options.push_back("false");
+    resetArg.optionNames.push_back("False");
 
     setArgs.push_back(resetArg);
 
@@ -957,9 +959,11 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     eraseArg.value = "true";
     eraseArg.name = "Erase the FPGA region of flash";
     eraseArg.description = "Erase the FPGA region of SPI flash, effectively disabling FPGA autoloading.";
-    eraseArg.type = SoapySDR::ArgInfo::STRING;
+    eraseArg.type = SoapySDR::ArgInfo::BOOL;
     eraseArg.options.push_back("true");
     eraseArg.optionNames.push_back("True");
+    eraseArg.options.push_back("false");
+    eraseArg.optionNames.push_back("False");
 
     setArgs.push_back(eraseArg);
 
@@ -989,9 +993,11 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     bootloaderArg.value = "true";
     bootloaderArg.name = "Clear out a firmware signature word in flash and jump to FX3 bootloader";
     bootloaderArg.description = "The device will continue to boot into the FX3 bootloader across power cycles until new firmware is written to the device.";
-    bootloaderArg.type = SoapySDR::ArgInfo::STRING;
+    bootloaderArg.type = SoapySDR::ArgInfo::BOOL;
     bootloaderArg.options.push_back("true");
     bootloaderArg.optionNames.push_back("True");
+    bootloaderArg.options.push_back("false");
+    bootloaderArg.optionNames.push_back("False");
 
     setArgs.push_back(bootloaderArg);
 
@@ -1029,15 +1035,15 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         return "unknown";
         #endif
     } else if (key == "reset") {
-        return "";
+        return "false";
     } else if (key == "erase_stored_fpga") {
-        return "";
+        return "false";
     } else if (key == "flash_firmware") {
         return "";
     } else if (key == "flash_fpga") {
         return "";
     } else if (key == "jump_to_bootloader") {
-        return "";
+        return "false";
     } else if (key == "load_fpga") {
         return "";
     }
