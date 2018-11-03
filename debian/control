@@ -12,7 +12,7 @@ Homepage: https://github.com/pothosware/SoapyBladeRF/wiki
 Vcs-Git: https://github.com/pothosware/SoapyBladeRF.git
 Vcs-Browser: https://github.com/pothosware/SoapyBladeRF
 
-Package: soapysdr0.6-module-bladerf
+Package: soapysdr0.7-module-bladerf
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -21,7 +21,7 @@ Description: Soapy BladeRF - BladeRF device support for Soapy SDR.
 
 Package: soapysdr-module-bladerf
 Architecture: all
-Depends: soapysdr0.6-module-bladerf, ${misc:Depends}
+Depends: soapysdr0.7-module-bladerf, ${misc:Depends}
 Description: Soapy BladeRF - BladeRF device support for Soapy SDR.
  A Soapy module that supports BladeRF devices within the Soapy API.
  .
