@@ -956,7 +956,7 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     // Erase stored FPGA
     SoapySDR::ArgInfo eraseArg;
     eraseArg.key = "erase_stored_fpga";
-    eraseArg.value = "true";
+    eraseArg.value = "false";
     eraseArg.name = "Erase the FPGA region of flash";
     eraseArg.description = "Erase the FPGA region of SPI flash, effectively disabling FPGA autoloading.";
     eraseArg.type = SoapySDR::ArgInfo::BOOL;
