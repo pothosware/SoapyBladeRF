@@ -990,7 +990,7 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     // Jump to bootloader
     SoapySDR::ArgInfo bootloaderArg;
     bootloaderArg.key = "jump_to_bootloader";
-    bootloaderArg.value = "true";
+    bootloaderArg.value = "false";
     bootloaderArg.name = "Clear out a firmware signature word in flash and jump to FX3 bootloader";
     bootloaderArg.description = "The device will continue to boot into the FX3 bootloader across power cycles until new firmware is written to the device.";
     bootloaderArg.type = SoapySDR::ArgInfo::BOOL;
