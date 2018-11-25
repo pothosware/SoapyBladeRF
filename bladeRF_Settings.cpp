@@ -1312,10 +1312,10 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
-        else {
+        /*else {
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid reset setting '%s'", value.c_str());
-        }
+        }*/
     }
     else if (key == "erase_stored_fpga")
     {
@@ -1330,10 +1330,10 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
-        else {
+        /*else {
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid erase setting '%s'", value.c_str());
-        }
+        }*/
     }
     else if (key == "flash_firmware")
     {
@@ -1345,10 +1345,10 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
-        else {
+        /*else {
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: The provided firmware file path is empty");
-        }
+        }*/
     }
     else if (key == "flash_fpga")
     {
@@ -1360,10 +1360,10 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
-        else {
+        /*else {
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: The provided FPGA image path is empty");
-        }
+        }*/
     }
     else if (key == "jump_to_bootloader")
     {
@@ -1378,10 +1378,10 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
-        else {
+        /*else {
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: Invalid jump to bootloader setting '%s'", value.c_str());
-        }
+        }*/
     }
     else if (key == "load_fpga")
     {
@@ -1393,10 +1393,10 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
         }
-        else {
+        /*else {
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: The provided FPGA image path is empty");
-        }
+        }*/
     }
     else
     {
