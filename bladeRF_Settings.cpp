@@ -942,7 +942,7 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
     // Device reset
     SoapySDR::ArgInfo resetArg;
     resetArg.key = "reset";
-    resetArg.value = "true";
+    resetArg.value = "false";
     resetArg.name = "Reset Device";
     resetArg.description = "Reset the device, causing it to reload its firmware from flash.";
     resetArg.type = SoapySDR::ArgInfo::BOOL;
