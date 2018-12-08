@@ -7,7 +7,7 @@ Build-Depends:
     cmake,
     libbladerf-dev,
     libsoapysdr-dev
-Standards-Version: 4.1.1
+Standards-Version: 4.1.4
 Homepage: https://github.com/pothosware/SoapyBladeRF/wiki
 Vcs-Git: https://github.com/pothosware/SoapyBladeRF.git
 Vcs-Browser: https://github.com/pothosware/SoapyBladeRF
