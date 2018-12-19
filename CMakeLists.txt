@@ -57,7 +57,7 @@ endif(APPLE)
 SOAPY_SDR_MODULE_UTIL(
     TARGET bladeRFSupport
     SOURCES
-        bladeRF_Registation.cpp
+        bladeRF_Registration.cpp
         bladeRF_Settings.cpp
         bladeRF_Streaming.cpp
     LIBRARIES
