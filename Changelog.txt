@@ -1,3 +1,9 @@
+Release 0.4.1 (pending)
+==========================
+
+- Remove ifdefs for v2 and other version conditionals
+  This is too complicated to maintain across versions.
+
 Release 0.4.0 (2018-12-07)
 ==========================
 

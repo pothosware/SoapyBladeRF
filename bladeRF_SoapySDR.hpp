@@ -28,11 +28,8 @@
 #include <queue>
 
 #if defined(LIBBLADERF_API_VERSION) && (LIBBLADERF_API_VERSION >= 0x02000000)
-#define LIBBLADERF_V2
-#endif
-
-#ifndef LIBBLADERF_V2
-typedef unsigned int bladerf_frequency;
+#else
+#error "Requires libladerfv2!"
 #endif
 
 /*!
@@ -259,17 +256,10 @@ public:
 
 private:
 
-    #ifndef LIBBLADERF_V2
-    static bladerf_module _toch(const int direction, const size_t)
-    {
-        return (direction == SOAPY_SDR_RX)?BLADERF_MODULE_RX:BLADERF_MODULE_TX;
-    }
-    #else
     static bladerf_channel _toch(const int direction, const size_t channel)
     {
         return (direction == SOAPY_SDR_RX)?BLADERF_CHANNEL_RX(channel):BLADERF_CHANNEL_TX(channel);
     }
-    #endif
 
     static std::string _err2str(const int err)
     {

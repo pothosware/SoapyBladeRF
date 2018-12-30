@@ -96,13 +96,6 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     if (channels.empty()) channels.push_back(0);
 
     //check the channel configuration
-    #ifndef LIBBLADERF_V2
-    if (channels.size() > 1 or (channels.size() > 0 and channels.at(0) != 0))
-    {
-        throw std::runtime_error("setupStream invalid channel selection");
-    }
-    const auto layout = _toch(direction, 0);
-    #else
     bladerf_channel_layout layout;
     if (channels.size() == 1 and channels.at(0) == 0)
     {
@@ -116,7 +109,6 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     {
         throw std::runtime_error("setupStream invalid channel selection");
     }
-    #endif
 
     //check the format
     if (format == "CF32") {}
@@ -404,11 +396,7 @@ int bladeRF_SoapySDR::writeStream(
         else
         {
             md.flags |= BLADERF_META_FLAG_TX_NOW;
-            #ifndef LIBBLADERF_V2
-            bladerf_get_timestamp(_dev, BLADERF_MODULE_TX, &md.timestamp);
-            #else
             bladerf_get_timestamp(_dev, BLADERF_TX, &md.timestamp);
-            #endif
         }
         _txNextTicks = md.timestamp;
     }
