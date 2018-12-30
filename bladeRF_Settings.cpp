@@ -300,9 +300,8 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t channel, co
 bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t channel) const
 {
     if (direction == SOAPY_SDR_TX) return false; //not supported on tx
-    int ret = 0;
     bladerf_gain_mode gain_mode;
-    ret = bladerf_get_gain_mode(_dev, _toch(direction, channel), &gain_mode);
+    int ret = bladerf_get_gain_mode(_dev, _toch(direction, channel), &gain_mode);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_mode() returned %s", _err2str(ret).c_str());
@@ -313,32 +312,17 @@ bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t channel) co
 
 std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t channel) const
 {
-    std::vector<std::string> options;
-
-    // Get board version
-    bladerf_fpga_size variant;
-    const int ret = bladerf_get_fpga_size(_dev, &variant);
-    if (ret != 0)
+    #define MAX_STAGES 8
+    const char *stages[MAX_STAGES];
+    int ret = bladerf_get_gain_stages(_dev, _toch(direction, channel), (const char **)&stages, MAX_STAGES);
+    if (ret < 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_stages() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("listGains() " + _err2str(ret));
     }
 
-    // BladeRF2
-    if (variant == BLADERF_FPGA_A4 || variant == BLADERF_FPGA_A9)
-    {
-        if (direction == SOAPY_SDR_RX) options.push_back("FULL");
-        else options.push_back("DSA");
-    }
-
-    //BladeRF1
-    else if (variant == BLADERF_FPGA_115KLE || variant == BLADERF_FPGA_40KLE)
-    {
-        if (direction == SOAPY_SDR_RX) options.push_back("LNA");
-        options.push_back("VGA1");
-        options.push_back("VGA2");
-    }
-
+    std::vector<std::string> options;
+    for (int i = 0; i < ret; i++) options.push_back(stages[i]);
     return options;
 }
 
@@ -354,50 +338,10 @@ void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const 
 
 void bladeRF_SoapySDR::setGain(const int direction, const size_t channel, const std::string &name, const double value)
 {
-    // Note: The BladeRF folks do not recommend using this API anymore.
-    // It may be unavailable or have unintended behavior if AGC is turned on.
-
-    int ret = 0;
-
-    bladerf_gain _value = (bladerf_gain)value;
-    bladerf_channel _channel = _toch(direction, channel);
-    bladerf_fpga_size variant;
-    ret = bladerf_get_fpga_size(_dev, &variant);
-
+    int ret = bladerf_set_gain_stage(_dev, _toch(direction, channel), name.c_str(), bladerf_gain(value));
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
-        throw std::runtime_error("setGain() " + _err2str(ret));
-    }
-
-    // BladeRF1 Support
-    if (variant == BLADERF_FPGA_115KLE or variant == BLADERF_FPGA_40KLE)
-    {
-        if (direction == SOAPY_SDR_RX and name == "LNA")
-        {
-            if      (value < 1.5) ret = bladerf_set_gain_stage(_dev, _channel, "lna", BLADERF_LNA_GAIN_BYPASS);
-            else if (value < 4.5) ret = bladerf_set_gain_stage(_dev, _channel, "lna", BLADERF_LNA_GAIN_MID);
-            else                  ret = bladerf_set_gain_stage(_dev, _channel, "lna", BLADERF_LNA_GAIN_MAX);
-        }
-        else if (direction == SOAPY_SDR_RX and name == "VGA1") ret = bladerf_set_gain_stage(_dev, _channel, "rxvga1", _value);
-        else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_set_gain_stage(_dev, _channel, "rxvga2", _value);
-        else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_set_gain_stage(_dev, _channel, "txvga1", _value);
-        else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_set_gain_stage(_dev, _channel, "txvga2", _value);
-        else throw std::runtime_error("setGain("+name+") -- unknown name");
-    }
-
-    // BladeRF2 Support
-    else if (variant == BLADERF_FPGA_A4 or variant == BLADERF_FPGA_A9)
-    {
-        if      (direction == SOAPY_SDR_RX and name == "FULL") ret = bladerf_set_gain_stage(_dev, _channel, "full", _value);
-        else if (direction == SOAPY_SDR_TX and name == "DSA")  ret = bladerf_set_gain_stage(_dev, _channel, "dsa", _value);
-        else throw std::runtime_error("setGain("+name+") -- unknown name");
-    }
-    else throw std::runtime_error("setGain("+name+") -- unknown board type");
-
-    if (ret != 0)
-    {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_stage(%f) returned %s", value, _err2str(ret).c_str());
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_stage(%s, %f) returned %s", name.c_str(), value, _err2str(ret).c_str());
         throw std::runtime_error("setGain("+name+") " + _err2str(ret));
     }
 }
@@ -408,7 +352,7 @@ double bladeRF_SoapySDR::getGain(const int direction, const size_t channel) cons
     const int ret = bladerf_get_gain(_dev, _toch(direction, channel), &gain);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain(%zu) returned %s", channel, _err2str(ret).c_str());
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getGain() " + _err2str(ret));
     }
     return (double)gain;
@@ -416,97 +360,36 @@ double bladeRF_SoapySDR::getGain(const int direction, const size_t channel) cons
 
 double bladeRF_SoapySDR::getGain(const int direction, const size_t channel, const std::string &name) const
 {
-    int ret = 0;
     bladerf_gain gain;
-    bladerf_channel _channel = _toch(direction, channel);
-    bladerf_fpga_size variant;
-    ret = bladerf_get_fpga_size(_dev, &variant);
-
+    int ret = bladerf_get_gain_stage(_dev, _toch(direction, channel), name.c_str(), &gain);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
-        throw std::runtime_error("setGain() " + _err2str(ret));
-    }
-
-    // BladeRF1 Support
-    if (variant == BLADERF_FPGA_115KLE or variant == BLADERF_FPGA_40KLE)
-    {
-
-        if (direction == SOAPY_SDR_RX and name == "LNA")
-        {
-            ret = bladerf_get_gain_stage(_dev, channel, "lna", &gain);
-            switch (gain)
-            {
-            case BLADERF_LNA_GAIN_UNKNOWN: gain = 0; break;
-            case BLADERF_LNA_GAIN_BYPASS: gain = 0; break;
-            case BLADERF_LNA_GAIN_MID: gain = BLADERF_LNA_GAIN_MID_DB; break;
-            case BLADERF_LNA_GAIN_MAX: gain = BLADERF_LNA_GAIN_MAX_DB; break;
-            }
-        }
-        else if (direction == SOAPY_SDR_RX and name == "VGA1") ret = bladerf_get_gain_stage(_dev, channel, "rxvga1", &gain);
-        else if (direction == SOAPY_SDR_RX and name == "VGA2") ret = bladerf_get_gain_stage(_dev, channel, "rxvga2", &gain);
-        else if (direction == SOAPY_SDR_TX and name == "VGA1") ret = bladerf_get_gain_stage(_dev, channel, "txvga1", &gain);
-        else if (direction == SOAPY_SDR_TX and name == "VGA2") ret = bladerf_get_gain_stage(_dev, channel, "txvga2", &gain);
-        else throw std::runtime_error("getGain("+name+") -- unknown name");
-    }
-
-    // BladeRF2 Support
-    else if (variant == BLADERF_FPGA_A4 or variant == BLADERF_FPGA_A9)
-    {
-        if      (direction == SOAPY_SDR_RX and name == "FULL") ret = bladerf_get_gain_stage(_dev, _channel, "full", &gain);
-        else if (direction == SOAPY_SDR_TX and name == "DSA")  ret = bladerf_get_gain_stage(_dev, _channel, "dsa", &gain);
-        else throw std::runtime_error("setGain("+name+") -- unknown name");
-    }
-    else throw std::runtime_error("setGain("+name+") -- unknown board type");
-    gain = (double)gain;
-
-    if (ret != 0)
-    {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_vga() returned %s", _err2str(ret).c_str());
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_stage(%s) returned %s", name.c_str(), _err2str(ret).c_str());
         throw std::runtime_error("getGain("+name+") " + _err2str(ret));
     }
+    return (double)gain;
+}
 
-    return gain;
+SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t channel) const
+{
+    const bladerf_range* range;
+    int ret = bladerf_get_gain_range(_dev, _toch(direction, channel), &range);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_range() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getGainRange()" + _err2str(ret));
+    }
+    return SoapySDR::Range(range->min, range->max, range->step);
 }
 
 SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t channel, const std::string &name) const
 {
     const bladerf_range* range;
-    bladerf_fpga_size variant;
-    const char* stage;
-    int ret = 0;
-
-    ret = bladerf_get_fpga_size(_dev, &variant);
-
+    int ret = bladerf_get_gain_stage_range(_dev, _toch(direction, channel), name.c_str(), &range);
     if (ret != 0)
     {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_fpga_size(%i) returned %s", variant, _err2str(ret).c_str());
-        throw std::runtime_error("getGainRange() " + _err2str(ret));
-    }
-
-    if (variant == BLADERF_FPGA_115KLE or variant == BLADERF_FPGA_40KLE)
-    {
-        if      (direction == SOAPY_SDR_RX and name == "LNA") stage = "lna";
-        else if (direction == SOAPY_SDR_RX and name == "VGA1") stage = "rxvga1";
-        else if (direction == SOAPY_SDR_RX and name == "VGA2") stage = "rxvga2";
-        else if (direction == SOAPY_SDR_TX and name == "VGA1") stage = "txvga1";
-        else if (direction == SOAPY_SDR_TX and name == "VGA2") stage = "txvga2";
-        else throw std::runtime_error("getGainRange("+name+") -- unknown name");
-    }
-    else if (variant == BLADERF_FPGA_A4 or variant == BLADERF_FPGA_A9)
-    {
-        if      (direction == SOAPY_SDR_RX and name == "FULL") stage = "full";
-        else if (direction == SOAPY_SDR_TX and name == "DSA") stage = "dsa";
-        else throw std::runtime_error("getGainRange("+name+") -- unknown name");
-    }
-    else throw std::runtime_error("getGainRange() board not supported");
-
-    ret = bladerf_get_gain_stage_range(_dev, _toch(direction, channel), stage, &range);
-
-    if (ret != 0)
-    {
-        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_stage_range(%s) returned %s", stage, _err2str(ret).c_str());
-        throw std::runtime_error("getGainRange()" + _err2str(ret));
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_stage_range(%s) returned %s", name.c_str(), _err2str(ret).c_str());
+        throw std::runtime_error("getGainRange("+name+")" + _err2str(ret));
     }
     return SoapySDR::Range(range->min, range->max, range->step);
 }
