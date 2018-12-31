@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2016 Josh Blum
+ * Copyright (C) 2015-2018 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -47,6 +47,8 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _timeNsOffset(0),
     _rxBuffSize(0),
     _txBuffSize(0),
+    _rxNumChan(0),
+    _txNumChan(0),
     _rxMinTimeoutMs(0),
     _xb200Mode("disabled"),
     _samplingMode("internal"),

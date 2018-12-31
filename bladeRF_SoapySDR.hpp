@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2016 Josh Blum
+ * Copyright (C) 2015-2018 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -328,6 +328,8 @@ private:
     int16_t *_txConvBuff;
     size_t _rxBuffSize;
     size_t _txBuffSize;
+    size_t _rxNumChan;
+    size_t _txNumChan;
     long _rxMinTimeoutMs;
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;
