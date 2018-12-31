@@ -25,6 +25,12 @@
 #include <stdexcept>
 #include <cstdio>
 
+//! convert bladerf range to a soapysdr range
+static SoapySDR::Range toRange(const bladerf_range* range)
+{
+    return SoapySDR::Range(range->min*range->scale, range->max*range->scale, range->step*range->scale);
+}
+
 /*******************************************************************
  * Device init/shutdown
  ******************************************************************/
@@ -379,7 +385,7 @@ SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_range() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getGainRange()" + _err2str(ret));
     }
-    return SoapySDR::Range(range->min, range->max, range->step);
+    return toRange(range);
 }
 
 SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t channel, const std::string &name) const
@@ -391,7 +397,7 @@ SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_stage_range(%s) returned %s", name.c_str(), _err2str(ret).c_str());
         throw std::runtime_error("getGainRange("+name+")" + _err2str(ret));
     }
-    return SoapySDR::Range(range->min, range->max, range->step);
+    return toRange(range);
 }
 
 /*******************************************************************
@@ -445,7 +451,7 @@ SoapySDR::RangeList bladeRF_SoapySDR::getFrequencyRange(const int direction, con
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_frequency_range() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getFrequencyRange() " + _err2str(ret));
     }
-    return {SoapySDR::Range(range->min, range->max, range->step)};
+    return {toRange(range)};
 }
 
 /*******************************************************************
@@ -509,7 +515,7 @@ SoapySDR::RangeList bladeRF_SoapySDR::getSampleRateRange(const int direction, co
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_sample_rate_range() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getSampleRateRange() " + _err2str(ret));
     }
-    return {SoapySDR::Range(range->min, range->max, range->step)};
+    return {toRange(range)};
 }
 
 void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t channel, const double bw)
@@ -552,7 +558,7 @@ SoapySDR::RangeList bladeRF_SoapySDR::getBandwidthRange(const int direction, con
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_bandwidth_range() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getBandwidthRange() " + _err2str(ret));
     }
-    return {SoapySDR::Range(range->min, range->max, range->step)};
+    return {toRange(range)};
 }
 
 /*******************************************************************
