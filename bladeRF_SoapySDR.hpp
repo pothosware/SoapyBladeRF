@@ -333,6 +333,7 @@ private:
     }
 
     bool _isBladeRF1;
+    bool _isBladeRF2;
     double _rxSampRate;
     double _txSampRate;
     bool _inTxBurst;

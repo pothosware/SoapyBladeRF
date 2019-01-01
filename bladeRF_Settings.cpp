@@ -68,11 +68,12 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
         throw std::runtime_error("bladerf_open_with_devinfo() failed " + _err2str(ret));
     }
 
-    _isBladeRF1 = this->getNumChannels(SOAPY_SDR_RX) == 1;
+    _isBladeRF1 = std::string(bladerf_get_board_name(_dev)) == "bladerf1";
+    _isBladeRF2 = std::string(bladerf_get_board_name(_dev)) == "bladerf2";
 
-    char serialStr[BLADERF_SERIAL_LENGTH];
-    ret = bladerf_get_serial(_dev, serialStr);
-    if (ret == 0) SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_get_serial() = %s", serialStr);
+    bladerf_serial serial;
+    ret = bladerf_get_serial_struct(_dev, &serial);
+    if (ret == 0) SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_get_serial() = %s", serial.serial);
 
     //initialize the sample rates to something
     this->setSampleRate(SOAPY_SDR_RX, 0, 4e6);
@@ -98,9 +99,9 @@ SoapySDR::Kwargs bladeRF_SoapySDR::getHardwareInfo(void) const
     SoapySDR::Kwargs info;
 
     {
-        char serialStr[BLADERF_SERIAL_LENGTH];
-        int ret = bladerf_get_serial(_dev, serialStr);
-        if (ret == 0) info["serial"] = serialStr;
+        bladerf_serial serial;
+        int ret = bladerf_get_serial_struct(_dev, &serial);
+        if (ret == 0) info["serial"] = serial.serial;
     }
 
     {
@@ -615,7 +616,7 @@ void bladeRF_SoapySDR::setHardwareTime(const long long timeNs, const std::string
 std::vector<std::string> bladeRF_SoapySDR::listSensors(void) const
 {
     std::vector<std::string> sensors;
-    if (!_isBladeRF1) sensors.push_back("RFIC_TEMP");
+    if (_isBladeRF2) sensors.push_back("RFIC_TEMP");
     return sensors;
 }
 
@@ -654,8 +655,8 @@ std::string bladeRF_SoapySDR::readSensor(const std::string &key) const
 std::vector<std::string> bladeRF_SoapySDR::listSensors(const int direction, const size_t channel) const
 {
     std::vector<std::string> sensors;
-    if (!_isBladeRF1 and direction == SOAPY_SDR_RX) sensors.push_back("PRE_RSSI");
-    if (!_isBladeRF1 and direction == SOAPY_SDR_RX) sensors.push_back("SYM_RSSI");
+    if (_isBladeRF2 and direction == SOAPY_SDR_RX) sensors.push_back("PRE_RSSI");
+    if (_isBladeRF2 and direction == SOAPY_SDR_RX) sensors.push_back("SYM_RSSI");
     return sensors;
 }
 
@@ -709,7 +710,7 @@ std::vector<std::string> bladeRF_SoapySDR::listRegisterInterfaces(void) const
 {
     std::vector<std::string> ifaces;
     if (_isBladeRF1) ifaces.push_back("LMS");
-    if (not _isBladeRF1) ifaces.push_back("RFIC");
+    if (_isBladeRF2) ifaces.push_back("RFIC");
     return ifaces;
 }
 
