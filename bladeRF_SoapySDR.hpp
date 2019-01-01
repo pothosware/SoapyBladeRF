@@ -347,8 +347,8 @@ private:
     int16_t *_txConvBuff;
     size_t _rxBuffSize;
     size_t _txBuffSize;
-    size_t _rxNumChan;
-    size_t _txNumChan;
+    std::vector<size_t> _rxChans;
+    std::vector<size_t> _txChans;
     long _rxMinTimeoutMs;
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;

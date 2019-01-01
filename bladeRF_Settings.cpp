@@ -49,8 +49,6 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     _timeNsOffset(0),
     _rxBuffSize(0),
     _txBuffSize(0),
-    _rxNumChan(0),
-    _txNumChan(0),
     _rxMinTimeoutMs(0),
     _xb200Mode("disabled"),
     _samplingMode("internal"),
