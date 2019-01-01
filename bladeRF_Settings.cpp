@@ -490,7 +490,7 @@ void bladeRF_SoapySDR::setSampleRate(const int direction, const size_t channel, 
     //restore the previous hardware time setting (after rate stash)
     this->setHardwareTime(timeNow);
 
-    SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%d, %f MHz), actual = %f MHz", direction, rate/1e6, actual/1e6);
+    SoapySDR::logf(SOAPY_SDR_INFO, "setSampleRate(%s, %d, %f MHz), actual = %f MHz", direction==SOAPY_SDR_RX?"Rx":"Tx", int(channel), rate/1e6, actual/1e6);
 }
 
 double bladeRF_SoapySDR::getSampleRate(const int direction, const size_t channel) const
