@@ -221,12 +221,29 @@ public:
     void setHardwareTime(const long long timeNs, const std::string &what = "");
 
     /*******************************************************************
-     * Register API
+     * Sensor API
      ******************************************************************/
 
-    void writeRegister(const unsigned addr, const unsigned value);
+    std::vector<std::string> listSensors(void) const;
 
-    unsigned readRegister(const unsigned addr) const;
+    SoapySDR::ArgInfo getSensorInfo(const std::string &key) const;
+
+    std::string readSensor(const std::string &key) const;
+
+    std::vector<std::string> listSensors(const int direction, const size_t channel) const;
+
+    SoapySDR::ArgInfo getSensorInfo(const int direction, const size_t channel, const std::string &key) const;
+
+    std::string readSensor(const int direction, const size_t channel, const std::string &key) const;
+
+    /*******************************************************************
+     * Register API
+     ******************************************************************/
+    std::vector<std::string> listRegisterInterfaces(void) const;
+
+    void writeRegister(const std::string &name, const unsigned addr, const unsigned value);
+
+    unsigned readRegister(const std::string &name, const unsigned addr) const;
 
     /*******************************************************************
      * Settings API
@@ -315,6 +332,7 @@ private:
         _rxMinTimeoutMs = long((2*1000*_rxBuffSize)/_rxSampRate);
     }
 
+    bool _isBladeRF1;
     double _rxSampRate;
     double _txSampRate;
     bool _inTxBurst;
