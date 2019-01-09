@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2017 Josh Blum
+ * Copyright (C) 2015-2018 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -41,7 +41,8 @@ static SoapySDR::Kwargs devinfo_to_kwargs(const bladerf_devinfo &info)
     if (r > 0) args["instance"] = std::string(buff, r);
 
     std::string shortSerial(std::string(info.serial));
-    shortSerial.replace(8, 16, "..");
+    //serial can take the value "ANY" on permissions errors
+    if (shortSerial.size() > 20) shortSerial.replace(8, 16, "..");
     args["label"] = "BladeRF #" + args["instance"] + " [" + shortSerial + "]";
 
     return args;

@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2016 Josh Blum
+ * Copyright (C) 2015-2018 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,11 +28,8 @@
 #include <queue>
 
 #if defined(LIBBLADERF_API_VERSION) && (LIBBLADERF_API_VERSION >= 0x02000000)
-#define LIBBLADERF_V2
-#endif
-
-#ifndef LIBBLADERF_V2
-typedef unsigned int bladerf_frequency;
+#else
+#error "Requires libladerfv2!"
 #endif
 
 /*!
@@ -181,6 +178,8 @@ public:
 
     double getGain(const int direction, const size_t channel, const std::string &name) const;
 
+    SoapySDR::Range getGainRange(const int direction, const size_t channel) const;
+
     SoapySDR::Range getGainRange(const int direction, const size_t channel, const std::string &name) const;
 
     /*******************************************************************
@@ -203,13 +202,13 @@ public:
 
     double getSampleRate(const int direction, const size_t channel) const;
 
-    std::vector<double> listSampleRates(const int direction, const size_t channel) const;
+    SoapySDR::RangeList getSampleRateRange(const int direction, const size_t channel) const;
 
     void setBandwidth(const int direction, const size_t channel, const double bw);
 
     double getBandwidth(const int direction, const size_t channel) const;
 
-    std::vector<double> listBandwidths(const int direction, const size_t channel) const;
+    SoapySDR::RangeList getBandwidthRange(const int direction, const size_t channel) const;
 
     /*******************************************************************
      * Time API
@@ -222,12 +221,29 @@ public:
     void setHardwareTime(const long long timeNs, const std::string &what = "");
 
     /*******************************************************************
-     * Register API
+     * Sensor API
      ******************************************************************/
 
-    void writeRegister(const unsigned addr, const unsigned value);
+    std::vector<std::string> listSensors(void) const;
 
-    unsigned readRegister(const unsigned addr) const;
+    SoapySDR::ArgInfo getSensorInfo(const std::string &key) const;
+
+    std::string readSensor(const std::string &key) const;
+
+    std::vector<std::string> listSensors(const int direction, const size_t channel) const;
+
+    SoapySDR::ArgInfo getSensorInfo(const int direction, const size_t channel, const std::string &key) const;
+
+    std::string readSensor(const int direction, const size_t channel, const std::string &key) const;
+
+    /*******************************************************************
+     * Register API
+     ******************************************************************/
+    std::vector<std::string> listRegisterInterfaces(void) const;
+
+    void writeRegister(const std::string &name, const unsigned addr, const unsigned value);
+
+    unsigned readRegister(const std::string &name, const unsigned addr) const;
 
     /*******************************************************************
      * Settings API
@@ -259,17 +275,10 @@ public:
 
 private:
 
-    #ifndef LIBBLADERF_V2
-    static bladerf_module _toch(const int direction, const size_t)
-    {
-        return (direction == SOAPY_SDR_RX)?BLADERF_MODULE_RX:BLADERF_MODULE_TX;
-    }
-    #else
     static bladerf_channel _toch(const int direction, const size_t channel)
     {
         return (direction == SOAPY_SDR_RX)?BLADERF_CHANNEL_RX(channel):BLADERF_CHANNEL_TX(channel);
     }
-    #endif
 
     static std::string _err2str(const int err)
     {
@@ -323,6 +332,8 @@ private:
         _rxMinTimeoutMs = long((2*1000*_rxBuffSize)/_rxSampRate);
     }
 
+    bool _isBladeRF1;
+    bool _isBladeRF2;
     double _rxSampRate;
     double _txSampRate;
     bool _inTxBurst;
@@ -336,6 +347,8 @@ private:
     int16_t *_txConvBuff;
     size_t _rxBuffSize;
     size_t _txBuffSize;
+    std::vector<size_t> _rxChans;
+    std::vector<size_t> _txChans;
     long _rxMinTimeoutMs;
     std::queue<StreamMetadata> _rxCmds;
     std::queue<StreamMetadata> _txResps;
