@@ -302,11 +302,17 @@ bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t channel) co
             return false;
         }
 
-        ret = bladerf_set_gain_mode(_dev, _toch(direction, channel), mode);
+		/* Test if it will take automatic mode */
+        ret = bladerf_set_gain_mode(_dev, _toch(direction, channel), BLADERF_GAIN_AUTOMATIC);
         if (ret != 0) {
             return false;
         }
 
+		/* We're good - restore it to the original mode */
+		ret = bladerf_set_gain_mode(_dev, _toch(direction, channel), mode);
+        if (ret != 0) {
+            return false;
+        }
         return true;
     }
 }
