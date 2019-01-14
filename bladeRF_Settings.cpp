@@ -536,6 +536,17 @@ SoapySDR::RangeList bladeRF_SoapySDR::getSampleRateRange(const int direction, co
     return {toRange(range)};
 }
 
+std::vector<double> bladeRF_SoapySDR::listSampleRates(const int, const size_t channel) const
+{
+    std::vector<double> options;
+    for (double r = 160e3; r <= 200e3; r += 40e3) options.push_back(r);
+    for (double r = 300e3; r <= 900e3; r += 100e3) options.push_back(r);
+    for (double r = 1e6; r <= 40e6; r += 1e6) options.push_back(r);
+    //options.push_back(BLADERF_SAMPLERATE_MIN);
+    //options.push_back(BLADERF_SAMPLERATE_REC_MAX);
+    return options;
+}
+
 void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t channel, const double bw)
 {
     //bypass the filter when sufficiently large BW is selected
@@ -578,6 +589,32 @@ SoapySDR::RangeList bladeRF_SoapySDR::getBandwidthRange(const int direction, con
     }
     return {toRange(range)};
 }
+
+std::vector<double> bladeRF_SoapySDR::listBandwidths(const int, const size_t) const
+{
+    std::vector<double> options;
+    options.push_back(0.75);
+    options.push_back(0.875);
+    options.push_back(1.25);
+    options.push_back(1.375);
+    options.push_back(1.5);
+    options.push_back(1.92);
+    options.push_back(2.5);
+    options.push_back(2.75);
+    options.push_back(3);
+    options.push_back(3.5);
+    options.push_back(4.375);
+    options.push_back(5);
+    options.push_back(6);
+    options.push_back(7);
+    options.push_back(10);
+    options.push_back(14);
+    for (size_t i = 0; i < options.size(); i++) options[i] *= 2e6;
+    //options.push_back(BLADERF_BANDWIDTH_MIN);
+    //options.push_back(BLADERF_BANDWIDTH_MAX);
+    return options;
+}
+
 
 /*******************************************************************
  * Time API

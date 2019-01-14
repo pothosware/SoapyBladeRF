@@ -202,6 +202,8 @@ public:
 
     double getSampleRate(const int direction, const size_t channel) const;
 
+	std::vector<double> listSampleRates(const int direction, const size_t channel) const;
+
     SoapySDR::RangeList getSampleRateRange(const int direction, const size_t channel) const;
 
     void setBandwidth(const int direction, const size_t channel, const double bw);
@@ -209,6 +211,8 @@ public:
     double getBandwidth(const int direction, const size_t channel) const;
 
     SoapySDR::RangeList getBandwidthRange(const int direction, const size_t channel) const;
+
+	std::vector<double> listBandwidths(const int direction, const size_t channel) const;
 
     /*******************************************************************
      * Time API
