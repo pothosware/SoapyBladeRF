@@ -539,8 +539,34 @@ SoapySDR::RangeList bladeRF_SoapySDR::getSampleRateRange(const int direction, co
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_sample_rate_range() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getSampleRateRange() " + _err2str(ret));
     }
-    return {toRange(range)};
+
+    //create useful ranges based on the overall range
+    //these values were suggested by the authors in the gr-osmosdr plugin for bladerf
+    const auto overallRange = toRange(range);
+    SoapySDR::RangeList ranges;
+    ranges.emplace_back(overallRange.minimum()/1.0, overallRange.maximum()/4.0, overallRange.maximum()/16.0);
+    ranges.emplace_back(overallRange.maximum()/4.0, overallRange.maximum()/2.0, overallRange.maximum()/8.0);
+    ranges.emplace_back(overallRange.maximum()/2.0, overallRange.maximum()/1.0, overallRange.maximum()/4.0);
+    return ranges;
 }
+
+std::vector<double> bladeRF_SoapySDR::listSampleRates(const int direction, const size_t channel) const
+{
+    //deprecated list of sample rates, just iterate though the ranges and build a list
+    std::vector<double> rates;
+    for (const auto &range : this->getSampleRateRange(direction, channel))
+    {
+        for (double rate = range.minimum(); rate <= range.maximum(); rate += range.step())
+        {
+            rates.push_back(rate);
+        }
+    }
+    return rates;
+}
+
+/*******************************************************************
+ * Bandwidth API
+ ******************************************************************/
 
 void bladeRF_SoapySDR::setBandwidth(const int direction, const size_t channel, const double bw)
 {
@@ -583,6 +609,24 @@ SoapySDR::RangeList bladeRF_SoapySDR::getBandwidthRange(const int direction, con
         throw std::runtime_error("getBandwidthRange() " + _err2str(ret));
     }
     return {toRange(range)};
+}
+
+std::vector<double> bladeRF_SoapySDR::listBandwidths(const int direction, const size_t channel) const
+{
+    //this is a deprecated call, it should be removed in the future
+    //for bladerfv2, return a simple 2 element list based on the available range
+    if (this->getNumChannels(direction) == 2)
+    {
+        const auto ranges = this->getBandwidthRange(direction, channel);
+        return {ranges.front().minimum(), ranges.back().maximum()};
+    }
+
+    //for bladerfv1 these were the chosen bw options
+    //but the authors removed it in gr-osmosdr
+    //so thats why its not present in the ranges API
+    std::vector<double> options = {0.75, 0.875, 1.25, 1.375, 1.5, 1.92, 2.5, 2.75, 3, 3.5, 4.375, 5, 6, 7, 10, 14};
+    for (auto &option : options) option *= 2e6;
+    return options;
 }
 
 /*******************************************************************
