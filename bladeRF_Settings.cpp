@@ -288,7 +288,33 @@ std::complex<double> bladeRF_SoapySDR::getIQBalance(const int direction, const s
 
 bool bladeRF_SoapySDR::hasGainMode(const int direction, const size_t channel) const
 {
-    return _toch(direction, channel) == BLADERF_CHANNEL_RX(channel) ? true : false;
+    if (_toch(direction, channel) != BLADERF_CHANNEL_RX(channel)) {
+        return false;
+    } else {
+        /* This actually depends on a lot of things, including presence of a LUT
+         * table, so best to determine dynamically.
+         */
+        bladerf_gain_mode mode;
+        int ret;
+
+        ret = bladerf_get_gain_mode(_dev, _toch(direction, channel), &mode);
+        if (ret != 0) {
+            return false;
+        }
+
+		/* Test if it will take automatic mode */
+        ret = bladerf_set_gain_mode(_dev, _toch(direction, channel), BLADERF_GAIN_AUTOMATIC);
+        if (ret != 0) {
+            return false;
+        }
+
+		/* We're good - restore it to the original mode */
+		ret = bladerf_set_gain_mode(_dev, _toch(direction, channel), mode);
+        if (ret != 0) {
+            return false;
+        }
+        return true;
+    }
 }
 
 void bladeRF_SoapySDR::setGainMode(const int direction, const size_t channel, const bool automatic)
