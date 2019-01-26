@@ -1,4 +1,4 @@
-Release 0.4.1 (pending)
+Release 0.4.1 (2019-01-26)
 ==========================
 
 - Support for MIMO 2x channel streams
