@@ -316,8 +316,7 @@ int bladeRF_SoapySDR::readStream(
     cmd.flags = 0; //clear flags for subsequent calls
 
     //prepare buffers
-    void *samples = (void *)buffs[0];
-    if (_rxFloats or _rxChans.size() == 2) samples = _rxConvBuff;
+    void *samples = _rxConvBuff;
 
     //recv the rx samples
     const long timeoutMs = std::max(_rxMinTimeoutMs, timeoutUs/1000);
@@ -336,7 +335,15 @@ int bladeRF_SoapySDR::readStream(
     numElems = md.actual_count / _rxChans.size();
 
     //perform the int16 to float conversion
-    if (_rxFloats and _rxChans.size() == 1)
+    if (not _rxFloats and _rxChans.size() == 1)
+    {
+        int16_t *output = (int16_t *)buffs[0];
+        for (size_t i = 0; i < 2 * numElems; i++)
+        {
+            output[i] = _rxConvBuff[i] << 4;
+        }
+    }
+    else if (_rxFloats and _rxChans.size() == 1)
     {
         float *output = (float *)buffs[0];
         for (size_t i = 0; i < 2 * numElems; i++)
@@ -350,10 +357,10 @@ int bladeRF_SoapySDR::readStream(
         int16_t *output1 = (int16_t *)buffs[1];
         for (size_t i = 0; i < 4 * numElems;)
         {
-            *(output0++) = _rxConvBuff[i++];
-            *(output0++) = _rxConvBuff[i++];
-            *(output1++) = _rxConvBuff[i++];
-            *(output1++) = _rxConvBuff[i++];
+            *(output0++) = _rxConvBuff[i++] << 4;
+            *(output0++) = _rxConvBuff[i++] << 4;
+            *(output1++) = _rxConvBuff[i++] << 4;
+            *(output1++) = _rxConvBuff[i++] << 4;
         }
     }
     else if (_rxFloats and _rxChans.size() == 2)
@@ -443,11 +450,18 @@ int bladeRF_SoapySDR::writeStream(
     }
 
     //prepare buffers
-    void *samples = (void *)buffs[0];
-    if (_txFloats or _txChans.size() == 2) samples = _txConvBuff;
+    void *samples = _txConvBuff;
 
     //perform the float to int16 conversion
-    if (_txFloats and _txChans.size() == 1)
+    if (not _txFloats and _txChans.size() == 1)
+    {
+        int16_t *input = (int16_t *)buffs[0];
+        for (size_t i = 0; i < 2 * numElems; i++)
+        {
+            _txConvBuff[i] = input[i] >> 4;
+        }
+    }
+    else if (_txFloats and _txChans.size() == 1)
     {
         float *input = (float *)buffs[0];
         for (size_t i = 0; i < 2 * numElems; i++)
@@ -461,10 +475,10 @@ int bladeRF_SoapySDR::writeStream(
         int16_t *input1 = (int16_t *)buffs[1];
         for (size_t i = 0; i < 4 * numElems;)
         {
-            _txConvBuff[i++] = *(input0++);
-            _txConvBuff[i++] = *(input0++);
-            _txConvBuff[i++] = *(input1++);
-            _txConvBuff[i++] = *(input1++);
+            _txConvBuff[i++] = *(input0++) >> 4;
+            _txConvBuff[i++] = *(input0++) >> 4;
+            _txConvBuff[i++] = *(input1++) >> 4;
+            _txConvBuff[i++] = *(input1++) >> 4;
         }
     }
     else if (_txFloats and _txChans.size() == 2)
