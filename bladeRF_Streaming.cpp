@@ -45,7 +45,7 @@ std::vector<std::string> bladeRF_SoapySDR::getStreamFormats(const int, const siz
 
 std::string bladeRF_SoapySDR::getNativeStreamFormat(const int, const size_t, double &fullScale) const
 {
-    fullScale = 2048;
+    fullScale = 32768;
     return "CS16";
 }
 
