@@ -144,17 +144,6 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
         throw std::runtime_error("setupStream() " + _err2str(ret));
     }
 
-    //enable channels used in streaming
-    for (const auto ch : channels)
-    {
-        ret = bladerf_enable_module(_dev, _toch(direction, ch), true);
-        if (ret != 0)
-        {
-            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(true) returned %d", ret);
-            throw std::runtime_error("setupStream() " + _err2str(ret));
-        }
-    }
-
     if (direction == SOAPY_SDR_RX)
     {
         _rxOverflow = false;
@@ -180,17 +169,6 @@ void bladeRF_SoapySDR::closeStream(SoapySDR::Stream *stream)
 {
     const int direction = *reinterpret_cast<int *>(stream);
     auto &chans = (direction == SOAPY_SDR_RX)?_rxChans:_txChans;
-
-    //deactivate the stream here -- only call once
-    for (const auto ch : chans)
-    {
-        const int ret = bladerf_enable_module(_dev, _toch(direction, ch), false);
-        if (ret != 0)
-        {
-            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(false) returned %s", _err2str(ret).c_str());
-            throw std::runtime_error("closeStream() " + _err2str(ret));
-        }
-    }
     chans.clear();
 
     //cleanup stream convert buffers

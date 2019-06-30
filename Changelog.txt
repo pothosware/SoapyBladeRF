@@ -1,3 +1,8 @@
+Release 0.4.2 (pending)
+==========================
+
+- Enable channels in the constructor
+
 Release 0.4.1 (2019-01-26)
 ==========================
 

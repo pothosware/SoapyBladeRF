@@ -73,6 +73,18 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
     ret = bladerf_get_serial_struct(_dev, &serial);
     if (ret == 0) SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_get_serial() = %s", serial.serial);
 
+    //enable channels
+    for (size_t ch = 0; ch < this->getNumChannels(SOAPY_SDR_RX); ch++)
+    {
+        auto ret = bladerf_enable_module(_dev, _toch(SOAPY_SDR_RX, ch), true);
+        if (ret != 0) SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(rx, true) returned %d", ret);
+    }
+    for (size_t ch = 0; ch < this->getNumChannels(SOAPY_SDR_TX); ch++)
+    {
+        auto ret = bladerf_enable_module(_dev, _toch(SOAPY_SDR_TX, ch), true);
+        if (ret != 0) SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(tx, true) returned %d", ret);
+    }
+
     //initialize the sample rates to something
     this->setSampleRate(SOAPY_SDR_RX, 0, 4e6);
     this->setSampleRate(SOAPY_SDR_TX, 0, 4e6);
@@ -80,6 +92,18 @@ bladeRF_SoapySDR::bladeRF_SoapySDR(const bladerf_devinfo &devinfo):
 
 bladeRF_SoapySDR::~bladeRF_SoapySDR(void)
 {
+    //disable channels
+    for (size_t ch = 0; ch < this->getNumChannels(SOAPY_SDR_RX); ch++)
+    {
+        auto ret = bladerf_enable_module(_dev, _toch(SOAPY_SDR_RX, ch), false);
+        if (ret != 0) SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(rx, false) returned %d", ret);
+    }
+    for (size_t ch = 0; ch < this->getNumChannels(SOAPY_SDR_TX); ch++)
+    {
+        auto ret = bladerf_enable_module(_dev, _toch(SOAPY_SDR_TX, ch), false);
+        if (ret != 0) SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_enable_module(tx, false) returned %d", ret);
+    }
+
     SoapySDR::logf(SOAPY_SDR_INFO, "bladerf_close()");
     if (_dev != NULL) bladerf_close(_dev);
 }
