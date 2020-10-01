@@ -630,6 +630,101 @@ std::vector<double> bladeRF_SoapySDR::listBandwidths(const int direction, const 
 }
 
 /*******************************************************************
+ * Clocking API
+ ******************************************************************/
+
+void bladeRF_SoapySDR::setMasterClockRate(const double rate)
+{
+    if (! _isBladeRF2) return;
+
+    int ret = bladerf_set_pll_refclk(_dev, uint64_t(rate));
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_pll_refclk() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("setMasterClockRate() " + _err2str(ret));
+    }
+}
+
+double bladeRF_SoapySDR::getMasterClockRate(void) const
+{
+    if (! _isBladeRF2) return 0;
+
+    uint64_t rate(0);
+    int ret = bladerf_get_pll_refclk(_dev, &rate);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_pll_refclk() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getMasterClockRate() " + _err2str(ret));
+    }
+
+    return double(rate);
+}
+
+SoapySDR::RangeList bladeRF_SoapySDR::getMasterClockRates(void) const
+{
+    if (! _isBladeRF2) return SoapySDR::RangeList();
+
+    const bladerf_range* range(nullptr);
+    int ret = bladerf_get_pll_refclk_range(_dev, &range);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_pll_refclk_range() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getMasterClockRates() " + _err2str(ret));
+    }
+
+    //create useful ranges based on the overall range
+    //these values were suggested by the authors in the gr-osmosdr plugin for bladerf
+    const auto overallRange = toRange(range);
+    SoapySDR::RangeList ranges;
+    ranges.emplace_back(overallRange.minimum()/1.0, overallRange.maximum()/4.0, overallRange.maximum()/16.0);
+    ranges.emplace_back(overallRange.maximum()/4.0, overallRange.maximum()/2.0, overallRange.maximum()/8.0);
+    ranges.emplace_back(overallRange.maximum()/2.0, overallRange.maximum()/1.0, overallRange.maximum()/4.0);
+    return ranges;
+}
+
+std::vector<std::string> bladeRF_SoapySDR::listClockSources(void) const
+{
+    std::vector<std::string> clocks;
+    if (_isBladeRF2) clocks.push_back("PLL");
+    return clocks;
+}
+
+void bladeRF_SoapySDR::setClockSource(const std::string &source)
+{
+    if (! _isBladeRF2) return;
+
+    bool enable = (source == "PLL");
+    int ret = bladerf_set_pll_enable(_dev, enable);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_pll_enable() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("setClockSource() " + _err2str(ret));
+    }
+}
+
+std::string bladeRF_SoapySDR::getClockSource(void) const
+{
+    if (! _isBladeRF2) return "";
+
+    bool enabled(false);
+    int ret = bladerf_get_pll_enable(_dev, &enabled);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_pll_enable() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getClockSource() " + _err2str(ret));
+    }
+
+    if (enabled) return "PLL";
+    else return "";
+}
+
+
+/*******************************************************************
  * Time API
  ******************************************************************/
 
