@@ -675,20 +675,14 @@ SoapySDR::RangeList bladeRF_SoapySDR::getMasterClockRates(void) const
         throw std::runtime_error("getMasterClockRates() " + _err2str(ret));
     }
 
-    //create useful ranges based on the overall range
-    //these values were suggested by the authors in the gr-osmosdr plugin for bladerf
-    const auto overallRange = toRange(range);
-    SoapySDR::RangeList ranges;
-    ranges.emplace_back(overallRange.minimum()/1.0, overallRange.maximum()/4.0, overallRange.maximum()/16.0);
-    ranges.emplace_back(overallRange.maximum()/4.0, overallRange.maximum()/2.0, overallRange.maximum()/8.0);
-    ranges.emplace_back(overallRange.maximum()/2.0, overallRange.maximum()/1.0, overallRange.maximum()/4.0);
-    return ranges;
+    return {toRange(range)};
 }
 
 std::vector<std::string> bladeRF_SoapySDR::listClockSources(void) const
 {
     std::vector<std::string> clocks;
-    if (_isBladeRF2) clocks.push_back("PLL");
+    clocks.push_back("internal");
+    if (_isBladeRF2) clocks.push_back("ref_in");
     return clocks;
 }
 
@@ -696,7 +690,7 @@ void bladeRF_SoapySDR::setClockSource(const std::string &source)
 {
     if (! _isBladeRF2) return;
 
-    bool enable = (source == "PLL");
+    bool enable = (source == "ref_in");
     int ret = bladerf_set_pll_enable(_dev, enable);
 
     if (ret != 0)
@@ -708,7 +702,7 @@ void bladeRF_SoapySDR::setClockSource(const std::string &source)
 
 std::string bladeRF_SoapySDR::getClockSource(void) const
 {
-    if (! _isBladeRF2) return "";
+    if (! _isBladeRF2) return "internal";
 
     bool enabled(false);
     int ret = bladerf_get_pll_enable(_dev, &enabled);
@@ -719,8 +713,8 @@ std::string bladeRF_SoapySDR::getClockSource(void) const
         throw std::runtime_error("getClockSource() " + _err2str(ret));
     }
 
-    if (enabled) return "PLL";
-    else return "";
+    if (enabled) return "ref_in";
+    else return "internal";
 }
 
 
