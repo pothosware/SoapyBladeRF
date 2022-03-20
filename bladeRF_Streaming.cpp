@@ -305,9 +305,7 @@ int bladeRF_SoapySDR::readStream(
 
     //initialize metadata
     bladerf_metadata md;
-    md.timestamp = 0;
-    md.flags = 0;
-    md.status = 0;
+    std::memset(&md, 0, sizeof(md));
 
     //without a soapy sdr time flag, set the blade rf now flag
     if ((cmd.flags & SOAPY_SDR_HAS_TIME) == 0) md.flags |= BLADERF_META_FLAG_RX_NOW;
@@ -407,9 +405,7 @@ int bladeRF_SoapySDR::writeStream(
 
     //initialize metadata
     bladerf_metadata md;
-    md.timestamp = 0;
-    md.flags = 0;
-    md.status = 0;
+    std::memset(&md, 0, sizeof(md));
 
     //time and burst start
     if (_inTxBurst)
