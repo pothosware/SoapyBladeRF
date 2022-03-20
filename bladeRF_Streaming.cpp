@@ -79,6 +79,17 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_
     xfersArg.range = SoapySDR::Range(0, 32);
     streamArgs.push_back(xfersArg);
 
+    SoapySDR::ArgInfo metaArg;
+    xfersArg.key = "meta";
+    xfersArg.value = "auto";
+    xfersArg.name = "Meta mode";
+    xfersArg.description = "Timestamp and burst streaming mode.\n"
+        "Automatic: meta in single channel mode, meta off in dual channel mode";
+    xfersArg.type = SoapySDR::ArgInfo::STRING;
+    xfersArg.options = {"auto", "meta", "normal"};
+    xfersArg.optionNames = {"Automatic", "Metadata Streams", "Normal Streams"};
+    streamArgs.push_back(metaArg);
+
     return streamArgs;
 }
 
@@ -91,15 +102,23 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     auto channels = channels_;
     if (channels.empty()) channels.push_back(0);
 
+    //meta mode, automatically on in single channel mode
+    auto metaMode = (args.count("meta") == 0)? "auto" : args.at("meta");
+    bladerf_format sync_format = BLADERF_FORMAT_SC16_Q11;
+    if (metaMode == "meta") sync_format = BLADERF_FORMAT_SC16_Q11_META;
+    if (metaMode == "normal") sync_format = BLADERF_FORMAT_SC16_Q11;
+
     //check the channel configuration
     bladerf_channel_layout layout;
     if (channels.size() == 1 and channels.at(0) == 0)
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X1:BLADERF_TX_X1;
+        if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11_META;
     }
     else if (channels.size() == 2 and channels.at(0) == 0 and channels.at(1) == 1)
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X2:BLADERF_TX_X2;
+        if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11;
     }
     else
     {
@@ -131,7 +150,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     int ret = bladerf_sync_config(
         _dev,
         layout,
-        BLADERF_FORMAT_SC16_Q11_META,
+        sync_format,
         numBuffs,
         bufSize,
         numXfers,
