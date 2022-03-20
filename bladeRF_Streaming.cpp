@@ -24,14 +24,8 @@
 #include <SoapySDR/Logger.hpp>
 #include <stdexcept>
 #include <iostream>
-
-//cross platform usleep()
-#ifdef _MSC_VER
-#include <windows.h>
-#define usleep(t) Sleep((t)/1000)
-#else
-#include <unistd.h>
-#endif
+#include <thread>
+#include <chrono>
 
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
@@ -552,8 +546,7 @@ int bladeRF_SoapySDR::readStreamStatus(
 
     //wait for an event to be ready considering the timeout and time
     //this is an emulation by polling and waiting on the hardware time
-    long long timeNowNs = this->getHardwareTime();
-    const long long exitTimeNs = timeNowNs + (timeoutUs*1000);
+    const auto exitTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(timeoutUs);
     while (true)
     {
         //no status to report, sleep for a bit
@@ -563,15 +556,16 @@ int bladeRF_SoapySDR::readStreamStatus(
         if ((_txResps.front().flags & SOAPY_SDR_HAS_TIME) == 0) break;
 
         //current status time expired, done waiting...
-        if (_txResps.front().timeNs < timeNowNs) break;
+        if (_txResps.front().timeNs < this->getHardwareTime()) break;
 
         //sleep a bit, never more than time remaining
         pollSleep:
-        usleep(std::min<long>(1000, (exitTimeNs-timeNowNs)/1000));
+        auto timeNow = std::chrono::high_resolution_clock::now();
+        auto timeLeft = std::chrono::duration_cast<std::chrono::microseconds>(exitTime - timeNow);
+        std::this_thread::sleep_for(std::chrono::microseconds(std::min<long>(1000, timeLeft.count())));
 
         //check for timeout expired
-        timeNowNs = this->getHardwareTime();
-        if (exitTimeNs < timeNowNs) return SOAPY_SDR_TIMEOUT;
+        if (exitTime < std::chrono::high_resolution_clock::now()) return SOAPY_SDR_TIMEOUT;
     }
 
     //extract the most recent status event
