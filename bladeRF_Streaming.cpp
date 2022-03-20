@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2018 Josh Blum
+ * Copyright (C) 2015-2022 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@
  */
 
 #include "bladeRF_SoapySDR.hpp"
+#include <SoapySDR/Formats.hpp>
 #include <SoapySDR/Logger.hpp>
 #include <stdexcept>
 #include <iostream>
@@ -37,16 +38,13 @@
 
 std::vector<std::string> bladeRF_SoapySDR::getStreamFormats(const int, const size_t) const
 {
-    std::vector<std::string> formats;
-    formats.push_back("CS16");
-    formats.push_back("CF32");
-    return formats;
+    return {SOAPY_SDR_CS16, SOAPY_SDR_CF32};
 }
 
 std::string bladeRF_SoapySDR::getNativeStreamFormat(const int, const size_t, double &fullScale) const
 {
     fullScale = 2048;
-    return "CS16";
+    return SOAPY_SDR_CS16;
 }
 
 SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_t) const
@@ -109,8 +107,8 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     }
 
     //check the format
-    if (format == "CF32") {}
-    else if (format == "CS16") {}
+    if (format == SOAPY_SDR_CF32) {}
+    else if (format == SOAPY_SDR_CS16) {}
     else throw std::runtime_error("setupStream invalid format " + format);
 
     //determine the number of buffers to allocate
@@ -159,7 +157,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     {
         _rxOverflow = false;
         _rxChans = channels;
-        _rxFloats = (format == "CF32");
+        _rxFloats = (format == SOAPY_SDR_CF32);
         _rxConvBuff = new int16_t[bufSize*2*_rxChans.size()];
         _rxBuffSize = bufSize;
         this->updateRxMinTimeoutMs();
@@ -167,7 +165,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
 
     if (direction == SOAPY_SDR_TX)
     {
-        _txFloats = (format == "CF32");
+        _txFloats = (format == SOAPY_SDR_CF32);
         _txChans = channels;
         _txConvBuff = new int16_t[bufSize*2*_txChans.size()];
         _txBuffSize = bufSize;
