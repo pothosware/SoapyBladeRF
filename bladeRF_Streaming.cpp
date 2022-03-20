@@ -169,6 +169,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
         _txChans = channels;
         _txConvBuff = new int16_t[bufSize*2*_txChans.size()];
         _txBuffSize = bufSize;
+        _inTxBurst = false;
     }
 
     return (SoapySDR::Stream *)(new int(direction));
@@ -405,7 +406,8 @@ int bladeRF_SoapySDR::writeStream(
     bladerf_metadata md;
     std::memset(&md, 0, sizeof(md));
 
-    //time and burst start
+    //stream is already in a burst and a new time was provided
+    //update the metadata burst time with the provided time
     if (_inTxBurst)
     {
         if ((flags & SOAPY_SDR_HAS_TIME) != 0)
@@ -415,19 +417,25 @@ int bladeRF_SoapySDR::writeStream(
             _txNextTicks = md.timestamp;
         }
     }
+
+    //the stream is not in a burst, start a new one
     else
     {
         md.flags |= BLADERF_META_FLAG_TX_BURST_START;
+        //use the metadata to start the burst and set a timestamp if provided
         if ((flags & SOAPY_SDR_HAS_TIME) != 0)
         {
             md.timestamp = _timeNsToTxTicks(timeNs);
+            _txNextTicks = md.timestamp;
         }
+        //otherwise set now flag and record the rough time for reporting
         else
         {
             md.flags |= BLADERF_META_FLAG_TX_NOW;
-            bladerf_get_timestamp(_dev, BLADERF_TX, &md.timestamp);
+            bladerf_timestamp t;
+            bladerf_get_timestamp(_dev, BLADERF_TX, &t);
+            _txNextTicks = t;
         }
-        _txNextTicks = md.timestamp;
     }
 
     //end of burst
