@@ -2,7 +2,7 @@
  * This file is part of the bladeRF project:
  *   http://www.github.com/nuand/bladeRF
  *
- * Copyright (C) 2015-2018 Josh Blum
+ * Copyright (C) 2015-2022 Josh Blum
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,33 +20,25 @@
  */
 
 #include "bladeRF_SoapySDR.hpp"
+#include <SoapySDR/Formats.hpp>
 #include <SoapySDR/Logger.hpp>
 #include <stdexcept>
 #include <iostream>
-
-//cross platform usleep()
-#ifdef _MSC_VER
-#include <windows.h>
-#define usleep(t) Sleep((t)/1000)
-#else
-#include <unistd.h>
-#endif
+#include <thread>
+#include <chrono>
 
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
 
 std::vector<std::string> bladeRF_SoapySDR::getStreamFormats(const int, const size_t) const
 {
-    std::vector<std::string> formats;
-    formats.push_back("CS16");
-    formats.push_back("CF32");
-    return formats;
+    return {SOAPY_SDR_CS16, SOAPY_SDR_CF32};
 }
 
 std::string bladeRF_SoapySDR::getNativeStreamFormat(const int, const size_t, double &fullScale) const
 {
     fullScale = 2048;
-    return "CS16";
+    return SOAPY_SDR_CS16;
 }
 
 SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_t) const
@@ -81,6 +73,17 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_
     xfersArg.range = SoapySDR::Range(0, 32);
     streamArgs.push_back(xfersArg);
 
+    SoapySDR::ArgInfo metaArg;
+    xfersArg.key = "meta";
+    xfersArg.value = "auto";
+    xfersArg.name = "Meta mode";
+    xfersArg.description = "Timestamp and burst streaming mode.\n"
+        "Automatic: meta in single channel mode, meta off in dual channel mode";
+    xfersArg.type = SoapySDR::ArgInfo::STRING;
+    xfersArg.options = {"auto", "meta", "normal"};
+    xfersArg.optionNames = {"Automatic", "Metadata Streams", "Normal Streams"};
+    streamArgs.push_back(metaArg);
+
     return streamArgs;
 }
 
@@ -93,15 +96,23 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     auto channels = channels_;
     if (channels.empty()) channels.push_back(0);
 
+    //meta mode, automatically on in single channel mode
+    auto metaMode = (args.count("meta") == 0)? "auto" : args.at("meta");
+    bladerf_format sync_format = BLADERF_FORMAT_SC16_Q11;
+    if (metaMode == "meta") sync_format = BLADERF_FORMAT_SC16_Q11_META;
+    if (metaMode == "normal") sync_format = BLADERF_FORMAT_SC16_Q11;
+
     //check the channel configuration
     bladerf_channel_layout layout;
     if (channels.size() == 1 and channels.at(0) == 0)
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X1:BLADERF_TX_X1;
+        if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11_META;
     }
     else if (channels.size() == 2 and channels.at(0) == 0 and channels.at(1) == 1)
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X2:BLADERF_TX_X2;
+        if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11;
     }
     else
     {
@@ -109,8 +120,8 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     }
 
     //check the format
-    if (format == "CF32") {}
-    else if (format == "CS16") {}
+    if (format == SOAPY_SDR_CF32) {}
+    else if (format == SOAPY_SDR_CS16) {}
     else throw std::runtime_error("setupStream invalid format " + format);
 
     //determine the number of buffers to allocate
@@ -133,7 +144,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     int ret = bladerf_sync_config(
         _dev,
         layout,
-        BLADERF_FORMAT_SC16_Q11_META,
+        sync_format,
         numBuffs,
         bufSize,
         numXfers,
@@ -159,7 +170,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     {
         _rxOverflow = false;
         _rxChans = channels;
-        _rxFloats = (format == "CF32");
+        _rxFloats = (format == SOAPY_SDR_CF32);
         _rxConvBuff = new int16_t[bufSize*2*_rxChans.size()];
         _rxBuffSize = bufSize;
         this->updateRxMinTimeoutMs();
@@ -167,10 +178,11 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
 
     if (direction == SOAPY_SDR_TX)
     {
-        _txFloats = (format == "CF32");
+        _txFloats = (format == SOAPY_SDR_CF32);
         _txChans = channels;
         _txConvBuff = new int16_t[bufSize*2*_txChans.size()];
         _txBuffSize = bufSize;
+        _inTxBurst = false;
     }
 
     return (SoapySDR::Stream *)(new int(direction));
@@ -305,9 +317,7 @@ int bladeRF_SoapySDR::readStream(
 
     //initialize metadata
     bladerf_metadata md;
-    md.timestamp = 0;
-    md.flags = 0;
-    md.status = 0;
+    std::memset(&md, 0, sizeof(md));
 
     //without a soapy sdr time flag, set the blade rf now flag
     if ((cmd.flags & SOAPY_SDR_HAS_TIME) == 0) md.flags |= BLADERF_META_FLAG_RX_NOW;
@@ -407,11 +417,10 @@ int bladeRF_SoapySDR::writeStream(
 
     //initialize metadata
     bladerf_metadata md;
-    md.timestamp = 0;
-    md.flags = 0;
-    md.status = 0;
+    std::memset(&md, 0, sizeof(md));
 
-    //time and burst start
+    //stream is already in a burst and a new time was provided
+    //update the metadata burst time with the provided time
     if (_inTxBurst)
     {
         if ((flags & SOAPY_SDR_HAS_TIME) != 0)
@@ -421,19 +430,25 @@ int bladeRF_SoapySDR::writeStream(
             _txNextTicks = md.timestamp;
         }
     }
+
+    //the stream is not in a burst, start a new one
     else
     {
         md.flags |= BLADERF_META_FLAG_TX_BURST_START;
+        //use the metadata to start the burst and set a timestamp if provided
         if ((flags & SOAPY_SDR_HAS_TIME) != 0)
         {
             md.timestamp = _timeNsToTxTicks(timeNs);
+            _txNextTicks = md.timestamp;
         }
+        //otherwise set now flag and record the rough time for reporting
         else
         {
             md.flags |= BLADERF_META_FLAG_TX_NOW;
-            bladerf_get_timestamp(_dev, BLADERF_TX, &md.timestamp);
+            bladerf_timestamp t;
+            bladerf_get_timestamp(_dev, BLADERF_TX, &t);
+            _txNextTicks = t;
         }
-        _txNextTicks = md.timestamp;
     }
 
     //end of burst
@@ -531,8 +546,7 @@ int bladeRF_SoapySDR::readStreamStatus(
 
     //wait for an event to be ready considering the timeout and time
     //this is an emulation by polling and waiting on the hardware time
-    long long timeNowNs = this->getHardwareTime();
-    const long long exitTimeNs = timeNowNs + (timeoutUs*1000);
+    const auto exitTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(timeoutUs);
     while (true)
     {
         //no status to report, sleep for a bit
@@ -542,15 +556,16 @@ int bladeRF_SoapySDR::readStreamStatus(
         if ((_txResps.front().flags & SOAPY_SDR_HAS_TIME) == 0) break;
 
         //current status time expired, done waiting...
-        if (_txResps.front().timeNs < timeNowNs) break;
+        if (_txResps.front().timeNs < this->getHardwareTime()) break;
 
         //sleep a bit, never more than time remaining
         pollSleep:
-        usleep(std::min<long>(1000, (exitTimeNs-timeNowNs)/1000));
+        auto timeNow = std::chrono::high_resolution_clock::now();
+        auto timeLeft = std::chrono::duration_cast<std::chrono::microseconds>(exitTime - timeNow);
+        std::this_thread::sleep_for(std::chrono::microseconds(std::min<long>(1000, timeLeft.count())));
 
         //check for timeout expired
-        timeNowNs = this->getHardwareTime();
-        if (exitTimeNs < timeNowNs) return SOAPY_SDR_TIMEOUT;
+        if (exitTime < std::chrono::high_resolution_clock::now()) return SOAPY_SDR_TIMEOUT;
     }
 
     //extract the most recent status event
