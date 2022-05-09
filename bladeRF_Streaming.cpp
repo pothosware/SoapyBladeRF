@@ -26,6 +26,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cstring> //memset
 
 #define DEF_NUM_BUFFS 32
 #define DEF_BUFF_LEN 4096
