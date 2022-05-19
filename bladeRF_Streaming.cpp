@@ -391,6 +391,10 @@ int bladeRF_SoapySDR::readStream(
         _rxOverflow = true;
     }
 
+    //add flags specific to BladeRF from bladerf_sync_rx.status.
+    if ((md.status & BLADERF_META_FLAG_RX_HW_MINIEXP1) != 0) flags |= SOAPY_SDR_USER_FLAG0;
+    if ((md.status & BLADERF_META_FLAG_RX_HW_MINIEXP2) != 0) flags |= SOAPY_SDR_USER_FLAG1;
+
     //consume from the command if this is a finite burst
     if (cmd.numElems > 0)
     {
