@@ -381,4 +381,22 @@ private:
     std::string _loopbackMode;
 
     bladerf *_dev;
+
+    /*!
+     * Will contain a list containing the info on the already computed quick tunes.
+     * The key is (direction, channel, frequency), as defined in setFrequency(direction, channel, name, frequency, args).
+     * The value is the computed bladerf_quick_tune.
+     * It is filled when calling setFrequency(direction, channel, name, frequency, args)
+     * with "saveQuickTune" in the args.
+     */
+    std::map<std::tuple<int, size_t, double>, bladerf_quick_tune*> _quickTunesByDirChanAndFreq;
+    //! Gets the quick tune info at the current frequency. Only available on BladeRF2.
+    bladerf_quick_tune* getRetune(const int direction, const size_t channel) const;
+    /*!
+     * Retunes to a specific quick tune.Only available on BladeRF2.
+     * This is usually not blocking (bladerf_schedule_retune is usually not blocking, unlike bladerf_set_frequency).
+     */
+    void retune(const int direction, const size_t channel, long long timestamp, bladerf_quick_tune* conf);
+    //! Sets the RF frequency. Throws a runtime_error if bladerf_set_frequency is unsuccessful.
+    void setRfFrequency(const int direction, const size_t channel, const double frequency);
 };
