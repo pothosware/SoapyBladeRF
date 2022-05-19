@@ -430,16 +430,82 @@ SoapySDR::Range bladeRF_SoapySDR::getGainRange(const int direction, const size_t
  * Frequency API
  ******************************************************************/
 
-void bladeRF_SoapySDR::setFrequency(const int direction, const size_t channel, const std::string &name, const double frequency, const SoapySDR::Kwargs &)
+void bladeRF_SoapySDR::setFrequency(const int direction, const size_t channel, const std::string &name, const double frequency, const SoapySDR::Kwargs &args)
 {
     if (name == "BB") return; //for compatibility
     if (name != "RF") throw std::runtime_error("setFrequency("+name+") unknown name");
 
+    //NOTE on quick tunes:
+    // - this is available on BladeRF2, not BladeRF1
+    // - there can be up to NUM_BBP_FASTLOCK_PROFILES (256) quick tunes in both directions.
+    //     bladerf2_get_quick_tune returns BLADERF_ERR_UNEXPECTED if you try to get more.
+    // - to clear previous quick tunes, the RFIC should have its state reset which is currently done
+    //     when the FPGA is loaded or reloaded. To have the ability to live reset the index to 0,
+    //     the ADI AXI core might have to be modified.
+
+    //if "saveQuickTune" == "1", set the frequency and store the quick tune parameter.
+    //NOTE that it's possible to overwrite previous quick tune parameter.
+    auto saveQuickTuneIter = args.find("saveQuickTune");
+    if (saveQuickTuneIter != args.end() && saveQuickTuneIter->second == "1")
+    {
+        if (!_isBladeRF2)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "saveQuickTune is only available for BladeRF2.");
+            throw std::runtime_error("saveQuickTune is only available for BladeRF2.");
+        }
+
+        setRfFrequency(direction, channel, frequency);
+
+        auto quickTune = getQuickTune(direction, channel);
+        if (quickTune == nullptr)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "Cannot set frequency for retune.");
+            throw std::runtime_error("Cannot set frequency for retune.");
+        }
+
+        auto quickTuneIter = _quickTunesByDirChanAndFreq.find({ direction, channel, frequency });
+        if (quickTuneIter != _quickTunesByDirChanAndFreq.end()) delete quickTuneIter->second;
+
+        _quickTunesByDirChanAndFreq[{direction, channel, frequency}] = quickTune;
+        return;
+    }
+
+    //Else, if "reuseQuickTune" == "1", we'll see if a corresponding quick tune parameter exists.
+    //If it does, we'll use it. Else, we throw an exception.
+    //If "timestamp" is specified, the quick tune will be scheduled at that time, else it'll be done at once.
+    auto reuseQuickTuneIter = args.find("reuseQuickTune");
+    if (reuseQuickTuneIter != args.end() && reuseQuickTuneIter->second == "1") {
+        if (!_isBladeRF2)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "reuseQuickTune is only available for BladeRF2.");
+            throw std::runtime_error("reuseQuickTune is only available for BladeRF2.");
+        }
+
+        auto quickTuneIter = _quickTunesByDirChanAndFreq.find({ direction, channel, frequency });
+        if (quickTuneIter == _quickTunesByDirChanAndFreq.end())
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "Unkown quick tune for frequency %f and channel %d", frequency, channel);
+            throw std::runtime_error("Unkown quick tune");
+        }
+
+        auto value = args.find("timestamp");
+        long long timestamp = value == args.end() ? 0 : std::stoll(value->second);
+
+        retune(direction, channel, timestamp, quickTuneIter->second);
+        return;
+    }
+
+    //Else, we simply set the RF frequency.
+    setRfFrequency(direction, channel, frequency);
+}
+
+void bladeRF_SoapySDR::setRfFrequency(const int direction, const size_t channel, const double frequency)
+{
     int ret = bladerf_set_frequency(_dev, _toch(direction, channel), bladerf_frequency(std::round(frequency)));
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_frequency(%f) returned %s", frequency, _err2str(ret).c_str());
-        throw std::runtime_error("setFrequency("+name+") " + _err2str(ret));
+        throw std::runtime_error("setFrequency(RF) " + _err2str(ret));
     }
 }
 
@@ -476,6 +542,35 @@ SoapySDR::RangeList bladeRF_SoapySDR::getFrequencyRange(const int direction, con
         throw std::runtime_error("getFrequencyRange() " + _err2str(ret));
     }
     return {toRange(range)};
+}
+
+bladerf_quick_tune* bladeRF_SoapySDR::getQuickTune(const int direction, const size_t channel) const
+{
+    bladerf_quick_tune* quick_tune = new bladerf_quick_tune();
+    bladerf_channel ch = _toch(direction, channel);
+    int ret = bladerf_get_quick_tune(_dev, ch, quick_tune);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_quick_tune() returned %s", _err2str(ret).c_str());
+        delete quick_tune;
+        return nullptr;
+    }
+
+    return quick_tune;
+}
+
+void bladeRF_SoapySDR::retune(const int direction, const size_t channel, long long timestamp, bladerf_quick_tune* quickTune)
+{
+    bladerf_channel ch = _toch(direction, channel);
+
+    int ret = bladerf_schedule_retune(_dev, ch, timestamp, 0 /* frequency not needed for retune */, quickTune);
+
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_schedule_retune() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("retune() " + _err2str(ret));
+    }
 }
 
 /*******************************************************************
