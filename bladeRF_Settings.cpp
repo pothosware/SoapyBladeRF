@@ -1057,6 +1057,34 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
 
     setArgs.push_back(loadArg);
 
+    // BiasTee TX
+    SoapySDR::ArgInfo biasTeeTx;
+    biasTeeTx.key = "biastee_tx";
+    biasTeeTx.value = "false";
+    biasTeeTx.name = "Enable bias tee for tx";
+    biasTeeTx.description = "Enables the bias tee on the tx channel 0";
+    biasTeeTx.type = SoapySDR::ArgInfo::BOOL;
+    biasTeeTx.options.push_back("true");
+    biasTeeTx.optionNames.push_back("True");
+    biasTeeTx.options.push_back("false");
+    biasTeeTx.optionNames.push_back("False");
+
+    setArgs.push_back(biasTeeTx);
+
+    // BiasTee RX
+    SoapySDR::ArgInfo biasTeeRx;
+    biasTeeRx.key = "biastee_rx";
+    biasTeeRx.value = "false";
+    biasTeeRx.name = "Enable bias tee for rx";
+    biasTeeRx.description = "Enables the bias tee on the rx channel 0";
+    biasTeeRx.type = SoapySDR::ArgInfo::BOOL;
+    biasTeeRx.options.push_back("true");
+    biasTeeRx.optionNames.push_back("True");
+    biasTeeRx.options.push_back("false");
+    biasTeeRx.optionNames.push_back("False");
+
+    setArgs.push_back(biasTeeRx);
+
     return setArgs;
 }
 
@@ -1088,6 +1116,10 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         return "false";
     } else if (key == "load_fpga") {
         return "";
+    } else if (key == "biastee_tx") {
+        return "false";
+    } else if (key == "biastee_rx") {
+        return "false";
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
@@ -1377,6 +1409,34 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             // --> Invalid setting has arrived
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladeRF: The provided FPGA image path is empty");
         }*/
+    }
+    else if (key == "biastee_tx")
+    {
+        if (value == "true") {
+            // --> Valid setting has arrived
+            int ret = bladerf_set_bias_tee(_dev, BLADERF_CHANNEL_TX(0), true);
+            if (ret != 0)
+            {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_bias_tee(BLADERF_CHANNEL_TX(0), %s) returned %s",
+                               value.c_str(),
+                               _err2str(ret).c_str());
+                throw std::runtime_error("writeSetting() " + _err2str(ret));
+            }
+        }
+    }
+    else if (key == "biastee_rx")
+    {
+        if (value == "true") {
+            // --> Valid setting has arrived
+            int ret = bladerf_set_bias_tee(_dev, BLADERF_CHANNEL_RX(0), true);
+            if (ret != 0)
+            {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_bias_tee(BLADERF_CHANNEL_RX(0), %s) returned %s",
+                               value.c_str(),
+                               _err2str(ret).c_str());
+                throw std::runtime_error("writeSetting() " + _err2str(ret));
+            }
+        }
     }
     else
     {
