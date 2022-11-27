@@ -2,7 +2,7 @@
 
 ## Build Status
 
-- Travis: [![Travis Build Status](https://travis-ci.org/pothosware/SoapyBladeRF.svg?branch=master)](https://travis-ci.org/pothosware/SoapyBladeRF)
+![Build Status](https://github.com/pothosware/SoapyBladeRF/actions/workflows/ci.yml/badge.svg)
 
 ## Dependencies
 

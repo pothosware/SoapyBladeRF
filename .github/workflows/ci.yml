@@ -1,0 +1,238 @@
+name: CI
+on: [push, pull_request]
+jobs:
+    linux-ci:
+        name: Linux
+        strategy:
+            fail-fast: false
+            matrix:
+                build_type: [Release, Debug]
+                config:
+                    - cc: gcc-9
+                      cxx: g++-9
+                      os: ubuntu-20.04
+
+                    - cc: gcc-10
+                      cxx: g++-10
+                      os: ubuntu-20.04
+
+                    - cc: gcc-11
+                      cxx: g++-11
+                      os: ubuntu-22.04
+
+                    - cc: gcc-12
+                      cxx: g++-12
+                      os: ubuntu-22.04
+
+                    - cc: clang-10
+                      cxx: clang++-10
+                      os: ubuntu-20.04
+
+                    - cc: clang-11
+                      cxx: clang++-11
+                      os: ubuntu-20.04
+
+                    - cc: clang-12
+                      cxx: clang++-12
+                      os: ubuntu-20.04
+
+                    - cc: clang-13
+                      cxx: clang++-13
+                      os: ubuntu-22.04
+
+                    - cc: clang-14
+                      cxx: clang++-14
+                      os: ubuntu-22.04
+        runs-on: ${{matrix.config.os}}
+        env:
+            CC: ${{matrix.config.cc}}
+            CXX: ${{matrix.config.cxx}}
+            INSTALL_PREFIX: /usr/local
+        steps:
+          - uses: actions/checkout@v2
+          - name: Install dependencies
+            run: |
+                sudo apt install libsoapysdr-dev libbladerf-dev
+          - name: Build SoapyBladeRF
+            run: |
+                mkdir ${{github.workspace}}/build
+                cd ${{github.workspace}}/build
+                cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ${{github.workspace}}
+                sudo make install
+          - name: Test module registration
+            run: |
+                SoapySDRUtil --check=bladerf
+    osx-ci:
+        name: OS X
+        strategy:
+            fail-fast: false
+            matrix:
+                build_type: [Release, Debug]
+                config:
+                    - cc: gcc-9
+                      cxx: g++-9
+                      os: macos-11
+
+                    - cc: gcc-10
+                      cxx: g++-10
+                      os: macos-11
+
+                    - cc: gcc-11
+                      cxx: g++-11
+                      os: macos-11
+
+                    - cc: clang
+                      cxx: clang++
+                      os: macos-11
+
+                    # TODO: re-enable after MacOS Monterey Python issue fixed
+                    #- cc: clang
+                    #  cxx: clang++
+                    #  os: macos-12
+        runs-on: ${{matrix.config.os}}
+        env:
+            CC: ${{matrix.config.cc}}
+            CXX: ${{matrix.config.cxx}}
+            INSTALL_PREFIX: /usr/local
+        steps:
+          - uses: actions/checkout@v2
+          - name: Install dependencies
+            run: |
+                brew install bladerf
+
+                # Build SoapySDR that supports OS X GCC modules
+                git clone https://github.com/pothosware/SoapySDR
+                cd SoapySDR
+                git checkout f8d57652d12f9d212f373a81e493eba1a0b058c5
+                mkdir build
+                cd build
+                cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                sudo make install
+          - name: Build SoapyBladeRF
+            run: |
+                mkdir ${{github.workspace}}/build
+                cd ${{github.workspace}}/build
+                cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ${{github.workspace}}
+                sudo make install
+          - name: Test module registration
+            run: |
+                SoapySDRUtil --check=bladerf
+#    windows-ci:
+#        name: Windows
+#        strategy:
+#            fail-fast: false
+#            matrix:
+#                build_type: [Release, Debug]
+#                config:
+#                    #
+#                    # MSVC
+#                    #
+#
+#                    - cmake_config: -G "Visual Studio 16 2019" -A "Win32"
+#                      arch: win32
+#                      os: windows-2019
+#                      msvc: true
+#
+#                    - cmake_config: -G "Visual Studio 16 2019" -A "x64"
+#                      arch: x64
+#                      os: windows-2019
+#                      msvc: true
+#
+#                    - cmake_config: -G "Visual Studio 17 2022" -A "Win32"
+#                      arch: win32
+#                      os: windows-2022
+#                      msvc: true
+#
+#                    - cmake_config: -G "Visual Studio 17 2022" -A "x64"
+#                      arch: x64
+#                      os: windows-2022
+#                      msvc: true
+#
+#                    #
+#                    # MinGW
+#                    #
+#
+#                    # TODO: reenable when Github updates GCC past 11.2.0
+#                    #- cmake_config: -G "MinGW Makefiles"
+#                    #  os: windows-2022
+#                    #  msvc: false
+#        runs-on: ${{matrix.config.os}}
+#        env:
+#            INSTALL_PREFIX: 'C:\Program Files\SoapySDR'
+#        steps:
+#          - uses: actions/checkout@v2
+#          - uses: ilammy/msvc-dev-cmd@v1
+#            if:
+#                ${{matrix.config.msvc == true}}
+#            with:
+#                arch: ${{matrix.arch}}
+#          - name: Install SoapySDR
+#            run: |
+#                git clone https://github.com/pothosware/SoapySDR -b soapy-sdr-0.8.1
+#                mkdir SoapySDR\build
+#                cd SoapySDR\build
+#                cmake ${{matrix.config.cmake_config}} -DENABLE_PYTHON=OFF -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+#                cmake --build . --config ${{matrix.build_type}}
+#                cmake --install . --config ${{matrix.build_type}}
+#          - name: Install VOLK
+#            run: |
+#                pip3 install mako
+#                git clone https://github.com/gnuradio/volk --recursive -b v2.5.1
+#                mkdir volk\build
+#                cd volk\build
+#                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+#                cmake --build . --config ${{matrix.build_type}}
+#                cmake --install . --config ${{matrix.build_type}}
+#          - name: Build SoapyBladeRF
+#            run: |
+#                $Env:INCLUDE += ";$Env:INSTALL_PREFIX\include"
+#                $Env:LIB += ";$Env:INSTALL_PREFIX\lib"
+#                mkdir build
+#                cd build
+#                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+#                cmake --build . --config ${{matrix.build_type}}
+#                cmake --install . --config ${{matrix.build_type}}
+#          - name: Test module registration
+#            run: |
+#                $Env:PATH += ";$Env:INSTALL_PREFIX\bin"
+#                SoapySDRUtil --check=bladerf
+    freebsd-ci:
+        name: FreeBSD
+        runs-on: macos-12
+        strategy:
+            fail-fast: false
+            matrix:
+                build_type: [Release, Debug]
+                release: ["12.3", "13.0", "13.1"]
+        steps:
+        - uses: actions/checkout@v2
+        - uses: vmactions/freebsd-vm@v0
+          name: Test in FreeBSD
+          with:
+              release: ${{matrix.release}}
+              copyback: false
+              prepare: |
+                  pkg install -y cmake SoapySDR comms/bladerf
+              run: |
+                  # We can't separate these steps, so add prints for clarity.
+
+                  echo
+                  echo "----------------------------------"
+                  echo "Building..."
+                  echo "----------------------------------"
+                  mkdir build
+                  cd build
+                  cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                  make
+
+                  echo
+                  echo "----------------------------------"
+                  echo "Installing..."
+                  echo "----------------------------------"
+                  make install
+
+                  echo
+                  echo "----------------------------------"
+                  echo "Testing module registration..."
+                  echo "----------------------------------"
+                  SoapySDRUtil --check=bladerf
