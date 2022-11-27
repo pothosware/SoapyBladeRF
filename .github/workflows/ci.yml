@@ -98,7 +98,7 @@ jobs:
           - uses: actions/checkout@v2
           - name: Install dependencies
             run: |
-                brew install bladerf
+                brew install libbladerf
 
                 # Build SoapySDR that supports OS X GCC modules
                 git clone https://github.com/pothosware/SoapySDR
