@@ -106,7 +106,7 @@ jobs:
                 git checkout f8d57652d12f9d212f373a81e493eba1a0b058c5
                 mkdir build
                 cd build
-                cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DENABLE_PYTHON=OFF -DENABLE_PYTHON3=OFF ..
                 sudo make install
           - name: Build SoapyBladeRF
             run: |
