@@ -52,7 +52,7 @@ jobs:
           - uses: actions/checkout@v2
           - name: Install dependencies
             run: |
-                sudo apt install libsoapysdr-dev soapysdr-tools libbladerf-dev
+                sudo apt install --no-install-recommends libsoapysdr-dev soapysdr-tools libbladerf-dev
           - name: Build SoapyBladeRF
             run: |
                 mkdir ${{github.workspace}}/build
