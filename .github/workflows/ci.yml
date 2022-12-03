@@ -195,7 +195,8 @@ jobs:
                 git clone --recursive https://github.com/Nuand/bladeRF.git -b libbladeRF_v2.4.1
                 mkdir bladeRF\build
                 cd bladeRF\build
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                # Skip the libusb version check, since it makes false assumptions about the .lib and .dll locations.
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -LIBUSB_SKIP_VERSION_CHECK=ON ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
           - name: Build SoapyBladeRF
