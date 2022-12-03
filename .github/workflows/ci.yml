@@ -130,21 +130,25 @@ jobs:
 
                     - cmake_config: -G "Visual Studio 16 2019" -A "Win32"
                       arch: win32
+                      pthread_arch: x86
                       os: windows-2019
                       msvc: true
 
                     - cmake_config: -G "Visual Studio 16 2019" -A "x64"
                       arch: x64
+                      pthread_arch: x64
                       os: windows-2019
                       msvc: true
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "Win32"
                       arch: win32
+                      pthread_arch: x86
                       os: windows-2022
                       msvc: true
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "x64"
                       arch: x64
+                      pthread_arch: x64
                       os: windows-2022
                       msvc: true
 
@@ -173,6 +177,9 @@ jobs:
             run: |
                 $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
+                $Env:PTHREAD_INCDIR = [IO.Path]::Combine('$Env:LIBPTHREADSWIN32_PATH', '${{matrix.config.pthread_arch}}', 'include')
+                $Env:PTHREAD_LIBDIR = [IO.Path]::Combine('$Env:LIBPTHREADSWIN32_PATH', '${{matrix.config.pthread_arch}}', 'lib')
+                $Env:PTHREAD_BINDIR = [IO.Path]::Combine('$Env:LIBPTHREADSWIN32_PATH', '${{matrix.config.pthread_arch}}', 'bin')
 
                 # SoapySDR
                 git clone https://github.com/pothosware/SoapySDR -b soapy-sdr-0.8.1
@@ -195,13 +202,16 @@ jobs:
                 git clone https://github.com/GerHobbelt/pthread-win32.git -b v3.0.3.1
                 mkdir pthread-win32\build
                 cd pthread-win32\build
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:LIBPTHREADSWIN32_PATH" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:LIBPTHREADSWIN32_PATH" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DHDRDEST="$Env:PTHREAD_INCDIR" -DLIBDST="$Env:PTHREAD_LIBDIR" -DDLLDST="$Env:PTHREAD_BINDIR" ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
-                # BladeRF looks for a file that doesn't exist in the pthread-win32 repo.
+                # Create and rearrange files to match what BladeRF's hardcoded to look for.
+                # Don't try this at home.
                 cd $Env:LIBPTHREADSWIN32_PATH
                 New-Item -Name COPYING.LIB -ItemType File
+                mv ${{matrix.config.pthread_arch}}\bin\*pthreadVC3.dll ${{matrix.config.pthread_arch}}\bin\pthreadVC2.dll
+                mv ${{matrix.config.pthread_arch}}\lib\*pthreadVC3.lib ${{matrix.config.pthread_arch}}\lib\pthreadVC2.lib
 
                 # libbladerf
                 cd ${{runner.workspace}}
