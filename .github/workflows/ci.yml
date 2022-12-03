@@ -154,6 +154,7 @@ jobs:
 
                     # TODO: reenable when Github updates GCC past 11.2.0
                     #- cmake_config: -G "MinGW Makefiles"
+                    #  arch: x64
                     #  os: windows-2022
                     #  msvc: false
         runs-on: ${{matrix.config.os}}
@@ -166,6 +167,7 @@ jobs:
                 ${{matrix.config.msvc == true}}
             with:
                 arch: ${{matrix.arch}}
+          - uses: microsoft/setup-msbuild@v1.1
           - name: Install dependencies
             run: |
                 # SoapySDR
@@ -177,9 +179,16 @@ jobs:
                 cmake --install . --config ${{matrix.build_type}}
 
                 # libusb, MSVC build common for both, linking is fine since it's C
+                cd ${{runner.workspace}}
                 git clone --recursive https://github.com/libusb/libusb.git -b v1.0.26
                 cd libusb\msvc
-                # TODO: figure out build+install commands
+                msbuild libusb_static_2019.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
+
+                $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
+                cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\lib\libusb-1.0.lib $Env:INSTALL_LIBDIR
+
+                $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
+                cp -v ..\libusb\*.h $Env:INSTALL_INCDIR
 
                 # libbladerf
                 cd ${{runner.workspace}}
