@@ -194,11 +194,14 @@ jobs:
                 $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 cp -v ..\libusb\*.h $Env:INSTALL_INCDIR
 
-                # pthread-win32 (TODO: separate MinGW)
+                # pthread-win32
                 cd ${{runner.workspace}}
-                git clone https://github.com/GerHobbelt/pthread-win32.git -b version-3.1.0-release
-                cd pthread-win32\windows\VS${{matrix.config.pthread_msvc_ver}}
-                msbuild pthread_lib.${{matrix.config.pthread_msvc_ver}}.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
+                git clone https://github.com/GerHobbelt/pthread-win32.git -b v3.0.3.1
+                mkdir pthread-win32\build
+                cd pthread-win32\build
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                cmake --build . --config ${{matrix.build_type}}
+                cmake --install . --config ${{matrix.build_type}}
 
                 # libbladerf
                 cd ${{runner.workspace}}
