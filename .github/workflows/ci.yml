@@ -198,7 +198,7 @@ jobs:
 
                 # For some reason, pthread-win32 ignores the install prefix and adds its own stuff onto it unless you manually
                 # pass in full paths as CMake options.
-                cmake ${{matrix.config.cmake_config}} -DHDRDEST="$Env:INSTALL_INCDIR" -DLIBDEST="$INSTALL_LIBDIR" -DDLLDEST="$INSTALL_BINDIR" -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                cmake ${{matrix.config.cmake_config}} -DHDRDEST="$Env:INSTALL_INCDIR" -DLIBDEST="$Env:INSTALL_LIBDIR" -DDLLDEST="$Env:INSTALL_BINDIR" -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
