@@ -201,11 +201,12 @@ jobs:
                 cd ${{runner.workspace}}
                 Invoke-WebRequest -Uri http://mirrors.kernel.org/sourceware/pthreads-win32/pthreads-w32-2-9-1-release.zip -Outfile pthreads.zip
                 Expand-Archive pthreads.zip pthreads
+                mkdir -pv $Env:PTHREAD_BINDIR
+                mkdir -pv $Env:PTHREAD_INCDIR
+                mkdir -pv $Env:PTHREAD_LIBDIR
                 cp -v pthreads\Pre-built.2\COPYING.LIB $Env:LIBPTHREADSWIN32_PATH
                 cp -v pthreads\Pre-built.2\include\* $Env:PTHREAD_INCDIR
-                mkdir -pv $Env:PTHREAD_BINDIR
                 cp -rv pthreads\Pre-built.2\dll\${{matrix.config.pthread_arch}} $Env:PTHREAD_BINDIR
-                mkdir -pv $Env:PTHREAD_LIBDIR
                 cp -rv pthreads\Pre-built.2\lib\${{matrix.config.pthread_arch}} $Env:PTHREAD_LIBDIR
 
                 # libbladerf
