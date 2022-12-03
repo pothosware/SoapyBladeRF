@@ -160,6 +160,7 @@ jobs:
         runs-on: ${{matrix.config.os}}
         env:
             INSTALL_PREFIX: 'C:\Program Files\SoapySDR'
+            LIBPTHREADSWIN32_PATH: 'C:\Program Files (x86)\pthreads-win32' # BladeRF hardcodes where it searches for this
         steps:
           - uses: actions/checkout@v2
           - uses: ilammy/msvc-dev-cmd@v1
@@ -170,7 +171,6 @@ jobs:
           - uses: microsoft/setup-msbuild@v1.1
           - name: Install dependencies
             run: |
-                $Env:INSTALL_BINDIR = Join-Path $Env:INSTALL_PREFIX "bin"
                 $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
 
@@ -195,12 +195,12 @@ jobs:
                 git clone https://github.com/GerHobbelt/pthread-win32.git -b v3.0.3.1
                 mkdir pthread-win32\build
                 cd pthread-win32\build
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:LIBPTHREADSWIN32_PATH" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
                 # BladeRF looks for a file that doesn't exist in the pthread-win32 repo.
-                cd $Env:INSTALL_PREFIX
+                cd $Env:LIBPTHREADSWIN32_PATH
                 New-Item -Name COPYING.LIB -ItemType File
 
                 # libbladerf
@@ -209,7 +209,7 @@ jobs:
                 mkdir bladeRF\build
                 cd bladeRF\build
                 # Skip the libusb version check, since it makes false assumptions about the .lib and .dll locations.
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DLIBUSB_SKIP_VERSION_CHECK=ON -DLIBPTHREADSWIN32_PATH="$Env:INSTALL_PREFIX" ..
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DLIBUSB_SKIP_VERSION_CHECK=ON ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
           - name: Build SoapyBladeRF
