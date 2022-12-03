@@ -177,9 +177,9 @@ jobs:
             run: |
                 $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
-                $Env:PTHREAD_INCDIR = [IO.Path]::Combine('$Env:LIBPTHREADSWIN32_PATH', '${{matrix.config.pthread_arch}}', 'include')
-                $Env:PTHREAD_LIBDIR = [IO.Path]::Combine('$Env:LIBPTHREADSWIN32_PATH', '${{matrix.config.pthread_arch}}', 'lib')
-                $Env:PTHREAD_BINDIR = [IO.Path]::Combine('$Env:LIBPTHREADSWIN32_PATH', '${{matrix.config.pthread_arch}}', 'bin')
+                $Env:PTHREAD_INCDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, '${{matrix.config.pthread_arch}}', 'include')
+                $Env:PTHREAD_LIBDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, '${{matrix.config.pthread_arch}}', 'lib')
+                $Env:PTHREAD_BINDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, '${{matrix.config.pthread_arch}}', 'bin')
 
                 # SoapySDR
                 git clone https://github.com/pothosware/SoapySDR -b soapy-sdr-0.8.1
