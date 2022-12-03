@@ -173,7 +173,6 @@ jobs:
                 $Env:INSTALL_BINDIR = Join-Path $Env:INSTALL_PREFIX "bin"
                 $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
-                $Env:INSTALL_LICENSE = Join-Path $Env:INSTALL_PREFIX "COPYING.LIB"
 
                 # SoapySDR
                 git clone https://github.com/pothosware/SoapySDR -b soapy-sdr-0.8.1
@@ -204,7 +203,8 @@ jobs:
                 cmake --install . --config ${{matrix.build_type}}
 
                 # BladeRF looks for a file that doesn't exist in the pthread-win32 repo.
-                New-Item -Name $Env:INSTALL_LICENSE -ItemType File
+                cd $Env:INSTALL_PREFIX
+                New-Item -Name COPYING.LIB -ItemType File
 
                 # libbladerf
                 cd ${{runner.workspace}}
