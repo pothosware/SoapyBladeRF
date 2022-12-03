@@ -195,10 +195,7 @@ jobs:
                 git clone https://github.com/GerHobbelt/pthread-win32.git -b v3.0.3.1
                 mkdir pthread-win32\build
                 cd pthread-win32\build
-
-                # For some reason, pthread-win32 ignores the install prefix and adds its own stuff onto it unless you manually
-                # pass in full paths as CMake options.
-                cmake ${{matrix.config.cmake_config}} -DHDRDEST="$Env:INSTALL_INCDIR" -DLIBDEST="$Env:INSTALL_LIBDIR" -DDLLDEST="$Env:INSTALL_BINDIR" -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
@@ -212,7 +209,7 @@ jobs:
                 mkdir bladeRF\build
                 cd bladeRF\build
                 # Skip the libusb version check, since it makes false assumptions about the .lib and .dll locations.
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DLIBUSB_SKIP_VERSION_CHECK=ON ..
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DLIBUSB_SKIP_VERSION_CHECK=ON -DLIBPTHREADSWIN32_PATH="$Env:INSTALL_PREFIX" ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
           - name: Build SoapyBladeRF
