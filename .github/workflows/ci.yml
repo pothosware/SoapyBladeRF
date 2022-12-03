@@ -132,25 +132,21 @@ jobs:
                       arch: win32
                       os: windows-2019
                       msvc: true
-                      pthread_msvc_ver: "2019"
 
                     - cmake_config: -G "Visual Studio 16 2019" -A "x64"
                       arch: x64
                       os: windows-2019
                       msvc: true
-                      pthread_msvc_ver: "2019"
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "Win32"
                       arch: win32
                       os: windows-2022
                       msvc: true
-                      pthread_msvc_ver: "2022"
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "x64"
                       arch: x64
                       os: windows-2022
                       msvc: true
-                      pthread_msvc_ver: "2022"
 
                     #
                     # MinGW
@@ -174,6 +170,10 @@ jobs:
           - uses: microsoft/setup-msbuild@v1.1
           - name: Install dependencies
             run: |
+                $Env:INSTALL_BINDIR = Join-Path $Env:INSTALL_PREFIX "bin"
+                $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
+                $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
+
                 # SoapySDR
                 git clone https://github.com/pothosware/SoapySDR -b soapy-sdr-0.8.1
                 mkdir SoapySDR\build
@@ -187,11 +187,7 @@ jobs:
                 git clone --recursive https://github.com/libusb/libusb.git -b v1.0.26
                 cd libusb\msvc
                 msbuild libusb_static_2019.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
-
-                $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
                 cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\lib\libusb-1.0.lib $Env:INSTALL_LIBDIR
-
-                $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 cp -v ..\libusb\*.h $Env:INSTALL_INCDIR
 
                 # pthread-win32
@@ -199,7 +195,10 @@ jobs:
                 git clone https://github.com/GerHobbelt/pthread-win32.git -b v3.0.3.1
                 mkdir pthread-win32\build
                 cd pthread-win32\build
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
+
+                # For some reason, pthread-win32 ignores the install prefix and adds its own stuff onto it unless you manually
+                # pass in full paths as CMake options.
+                cmake ${{matrix.config.cmake_config}} -DHDRDEST="$Env:INSTALL_INCDIR" -DLIBDEST="$INSTALL_LIBDIR" -DDLLDEST="$INSTALL_BINDIR" -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
