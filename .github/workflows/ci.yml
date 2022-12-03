@@ -202,7 +202,7 @@ jobs:
                 git clone https://github.com/GerHobbelt/pthread-win32.git -b v3.0.3.1
                 mkdir pthread-win32\build
                 cd pthread-win32\build
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:LIBPTHREADSWIN32_PATH" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DHDRDEST="$Env:PTHREAD_INCDIR" -DLIBDST="$Env:PTHREAD_LIBDIR" -DDLLDST="$Env:PTHREAD_BINDIR" ..
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:LIBPTHREADSWIN32_PATH" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DHDRDEST="$Env:PTHREAD_INCDIR" -DLIBDEST="$Env:PTHREAD_LIBDIR" -DDLLDEST="$Env:PTHREAD_BINDIR" ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
