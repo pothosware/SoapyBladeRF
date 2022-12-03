@@ -132,21 +132,25 @@ jobs:
                       arch: win32
                       os: windows-2019
                       msvc: true
+                      pthread_msvc_ver: "2019"
 
                     - cmake_config: -G "Visual Studio 16 2019" -A "x64"
                       arch: x64
                       os: windows-2019
                       msvc: true
+                      pthread_msvc_ver: "2019"
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "Win32"
                       arch: win32
                       os: windows-2022
                       msvc: true
+                      pthread_msvc_ver: "2022"
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "x64"
                       arch: x64
                       os: windows-2022
                       msvc: true
+                      pthread_msvc_ver: "2022"
 
                     #
                     # MinGW
@@ -189,6 +193,12 @@ jobs:
 
                 $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
                 cp -v ..\libusb\*.h $Env:INSTALL_INCDIR
+
+                # pthread-win32 (TODO: separate MinGW)
+                cd ${{runner.workspace}}
+                git clone https://github.com/GerHobbelt/pthread-win32.git -b version-3.1.0-release
+                cd pthread-win32\windows\VS${{matrix.config.pthread_msvc_ver}}
+                msbuild pthread_lib.${{matrix.config.pthread_msvc_ver}}.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
 
                 # libbladerf
                 cd ${{runner.workspace}}
