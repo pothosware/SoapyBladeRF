@@ -208,10 +208,11 @@ jobs:
 
                 # Create and rearrange files to match what BladeRF's hardcoded to look for.
                 # Don't try this at home.
+                # TODO: different path for MinGW
                 cd $Env:LIBPTHREADSWIN32_PATH
                 New-Item -Name COPYING.LIB -ItemType File
-                mv ${{matrix.config.pthread_arch}}\bin\*pthreadVC3.dll ${{matrix.config.pthread_arch}}\bin\pthreadVC2.dll
-                mv ${{matrix.config.pthread_arch}}\lib\*pthreadVC3.lib ${{matrix.config.pthread_arch}}\lib\pthreadVC2.lib
+                mv ${{matrix.config.pthread_arch}}\bin\pthreadVC3.dll ${{matrix.config.pthread_arch}}\bin\pthreadVC2.dll
+                mv ${{matrix.config.pthread_arch}}\lib\pthreadVC3.lib ${{matrix.config.pthread_arch}}\lib\pthreadVC2.lib
 
                 # libbladerf
                 cd ${{runner.workspace}}
