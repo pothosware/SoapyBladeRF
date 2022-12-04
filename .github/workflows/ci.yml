@@ -192,6 +192,8 @@ jobs:
                 git clone --recursive https://github.com/libusb/libusb.git -b v1.0.26
                 cd libusb\msvc
                 msbuild libusb_dll_2019.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
+                mkdir -p $Env:LIBUSB_INCDIR
+                mkdir -p $Env:LIBUSB_BINDIR
                 cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\dll\libusb-1.0.lib $Env:LIBUSB_BINDIR
                 cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\dll\libusb-1.0.dll $Env:LIBUSB_BINDIR
                 cp -v ..\libusb\*.h $Env:LIBUSB_INCDIR
