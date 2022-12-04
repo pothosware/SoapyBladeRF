@@ -206,8 +206,8 @@ jobs:
                 mkdir -p $Env:PTHREAD_LIBDIR
                 cp -v pthreads\Pre-built.2\COPYING.LIB $Env:LIBPTHREADSWIN32_PATH
                 cp -v pthreads\Pre-built.2\include\* $Env:PTHREAD_INCDIR
-                cp -r -v pthreads\Pre-built.2\dll\${{matrix.config.pthread_arch}} $Env:PTHREAD_BINDIR
-                cp -r -v pthreads\Pre-built.2\lib\${{matrix.config.pthread_arch}} $Env:PTHREAD_LIBDIR
+                cp -v pthreads\Pre-built.2\dll\${{matrix.config.pthread_arch}}/* $Env:PTHREAD_BINDIR
+                cp -v pthreads\Pre-built.2\lib\${{matrix.config.pthread_arch}}/* $Env:PTHREAD_LIBDIR
 
                 # libbladerf
                 cd ${{runner.workspace}}
