@@ -131,24 +131,28 @@ jobs:
                     - cmake_config: -G "Visual Studio 16 2019" -A "Win32"
                       arch: win32
                       pthread_arch: x86
+                      libusb_windows_ver: "MS32"
                       os: windows-2019
                       msvc: true
 
                     - cmake_config: -G "Visual Studio 16 2019" -A "x64"
                       arch: x64
                       pthread_arch: x64
+                      libusb_windows_ver: "MS64"
                       os: windows-2019
                       msvc: true
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "Win32"
                       arch: win32
                       pthread_arch: x86
+                      libusb_windows_ver: "MS32"
                       os: windows-2022
                       msvc: true
 
                     - cmake_config: -G "Visual Studio 17 2022" -A "x64"
                       arch: x64
                       pthread_arch: x64
+                      libusb_windows_ver: "MS64"
                       os: windows-2022
                       msvc: true
 
@@ -161,10 +165,13 @@ jobs:
                     #  arch: x64
                     #  os: windows-2022
                     #  msvc: false
+                    # libusb_windows_ver: "MinGW64"
         runs-on: ${{matrix.config.os}}
         env:
             INSTALL_PREFIX: 'C:\Program Files\SoapySDR'
-            LIBPTHREADSWIN32_PATH: 'C:\Program Files (x86)\pthreads-win32' # BladeRF hardcodes where it searches for this
+            # For no good reason, BladeRF hardcodes where it searches for its Windows dependencies.
+            LIBUSB_DIR: 'C:\Program Files (x86)\libusb-1.0.20'
+            LIBPTHREADSWIN32_PATH: 'C:\Program Files (x86)\pthreads-win32'
         steps:
           - uses: actions/checkout@v2
           - uses: ilammy/msvc-dev-cmd@v1
@@ -173,14 +180,23 @@ jobs:
             with:
                 arch: ${{matrix.arch}}
           - uses: microsoft/setup-msbuild@v1.1
+          - name: Install MSVC dependencies
+            if:
+                ${{matrix.config.msvc == true}}
+            run: |
+                # libusb
+                $Env:LIBUSB_INCDIR = [IO.Path]::Combine($Env:LIBUSB_DIR, 'include')
+                $Env:LIBUSB_BINDIR = [IO.Path]::Combine($Env:LIBUSB_DIR, '${{matrix.config.libusb_windows_ver}}', 'dll')
+
+                cd ${{runner.workspace}}
+                git clone --recursive https://github.com/libusb/libusb.git -b v1.0.26
+                cd libusb\msvc
+                msbuild libusb_dll_2019.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
+                cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\dll\libusb-1.0.lib $Env:INSTALL_BINDIR
+                cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\dll\libusb-1.0.dll $Env:INSTALL_BINDIR
+                cp -v ..\libusb\*.h $Env:INSTALL_INCDIR
           - name: Install dependencies
             run: |
-                $Env:INSTALL_INCDIR = Join-Path $Env:INSTALL_PREFIX "include"
-                $Env:INSTALL_LIBDIR = Join-Path $Env:INSTALL_PREFIX "lib"
-                $Env:PTHREAD_INCDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, '${{matrix.config.pthread_arch}}', 'include')
-                $Env:PTHREAD_LIBDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, '${{matrix.config.pthread_arch}}', 'lib')
-                $Env:PTHREAD_BINDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, '${{matrix.config.pthread_arch}}', 'bin')
-
                 # SoapySDR
                 git clone https://github.com/pothosware/SoapySDR -b soapy-sdr-0.8.1
                 mkdir SoapySDR\build
@@ -189,13 +205,10 @@ jobs:
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
 
-                # libusb, MSVC build common for both, linking is fine since it's C
-                cd ${{runner.workspace}}
-                git clone --recursive https://github.com/libusb/libusb.git -b v1.0.26
-                cd libusb\msvc
-                msbuild libusb_static_2019.vcxproj /p:configuration=${{matrix.build_type}} /p:platform=${{matrix.config.arch}}
-                cp -v ..\${{matrix.config.arch}}\${{matrix.build_type}}\lib\libusb-1.0.lib $Env:INSTALL_LIBDIR
-                cp -v ..\libusb\*.h $Env:INSTALL_INCDIR
+                # For no good reason, libbladerf hardcodes where it looks for its Windows dependencies.
+                $Env:PTHREAD_INCDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, 'include')
+                $Env:PTHREAD_LIBDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, 'lib', '${{matrix.config.pthread_arch}}')
+                $Env:PTHREAD_BINDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, 'dll', '${{matrix.config.pthread_arch}}')
 
                 # pthreads-win32
                 cd ${{runner.workspace}}
@@ -206,16 +219,16 @@ jobs:
                 mkdir -p $Env:PTHREAD_LIBDIR
                 cp -v pthreads\Pre-built.2\COPYING.LIB $Env:LIBPTHREADSWIN32_PATH
                 cp -v pthreads\Pre-built.2\include\* $Env:PTHREAD_INCDIR
-                cp -v pthreads\Pre-built.2\dll\${{matrix.config.pthread_arch}}/* $Env:PTHREAD_BINDIR
-                cp -v pthreads\Pre-built.2\lib\${{matrix.config.pthread_arch}}/* $Env:PTHREAD_LIBDIR
+                cp -v pthreads\Pre-built.2\dll\${{matrix.config.pthread_arch}}\* $Env:PTHREAD_BINDIR
+                cp -v pthreads\Pre-built.2\lib\${{matrix.config.pthread_arch}}\* $Env:PTHREAD_LIBDIR
 
                 # libbladerf
                 cd ${{runner.workspace}}
                 git clone --recursive https://github.com/Nuand/bladeRF.git -b libbladeRF_v2.4.1
                 mkdir bladeRF\build
                 cd bladeRF\build
-                # Skip the libusb version check, since it makes false assumptions about the .lib and .dll locations.
-                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DLIBUSB_SKIP_VERSION_CHECK=ON ..
+                git apply ${{runner.workspace}}\.github\patches\bladerf_msvc.patch
+                cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DTREAT_WARNINGS_AS_ERRORS=OFF ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
           - name: Build SoapyBladeRF
