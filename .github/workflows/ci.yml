@@ -229,7 +229,7 @@ jobs:
                 git clone --recursive https://github.com/Nuand/bladeRF.git -b libbladeRF_v2.4.1
                 mkdir bladeRF\build
                 cd bladeRF\build
-                git apply ${{github.workspace}}\.github\patches\bladerf_msvc.patch
+                git apply -v ${{github.workspace}}\.github\patches\bladerf_msvc.patch
                 cmake ${{matrix.config.cmake_config}} -DCMAKE_INSTALL_PREFIX="$Env:INSTALL_PREFIX" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DTREAT_WARNINGS_AS_ERRORS=OFF ..
                 cmake --build . --config ${{matrix.build_type}}
                 cmake --install . --config ${{matrix.build_type}}
