@@ -245,6 +245,7 @@ jobs:
                 cmake --install . --config ${{matrix.build_type}}
           - name: Test module registration
             run: |
+                $Env:PTHREAD_BINDIR = [IO.Path]::Combine($Env:LIBPTHREADSWIN32_PATH, 'dll', '${{matrix.config.pthread_arch}}')
                 $Env:LIBUSB_BINDIR = [IO.Path]::Combine($Env:LIBUSB_DIR, '${{matrix.config.libusb_windows_ver}}', 'dll')
                 # We need "lib" in the PATH because for some reason, BladeRF puts DLLs in this directory.
                 $Env:PATH += ";$Env:INSTALL_PREFIX\bin;$Env:INSTALL_PREFIX\lib;$Env:PTHREAD_BINDIR\${{matrix.config.pthread_arch}};$ENV:LIBUSB_BINDIR"
