@@ -341,6 +341,8 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t channel, co
         gain_mode_string = "slowattack";
     } else if (return_mode == BLADERF_GAIN_HYBRID_AGC) {
         gain_mode_string = "hybrid";
+    } else {
+        gain_mode_string = "<unknown>";
     }
 
     SoapySDR::logf(SOAPY_SDR_INFO, "setGainMode(%s, %d, %d), actual = %s", direction==SOAPY_SDR_RX?"Rx":"Tx", int(channel), automatic, gain_mode_string.c_str());
