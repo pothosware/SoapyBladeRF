@@ -327,6 +327,23 @@ void bladeRF_SoapySDR::setGainMode(const int direction, const size_t channel, co
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_gain_mode(%s) returned %s", automatic?"automatic":"manual", _err2str(ret).c_str());
         throw std::runtime_error("setGainMode() " + _err2str(ret));
     }
+    bladerf_gain_mode return_mode;
+    bladerf_get_gain_mode(_dev, _toch(direction, channel), &return_mode);
+    std::string gain_mode_string;
+
+    if (return_mode == BLADERF_GAIN_DEFAULT) {
+        gain_mode_string = "default";
+    } else if (return_mode == BLADERF_GAIN_MGC) {
+        gain_mode_string = "manual";
+    } else if (return_mode == BLADERF_GAIN_FASTATTACK_AGC) {
+        gain_mode_string = "fastattack";
+    } else if (return_mode == BLADERF_GAIN_SLOWATTACK_AGC) {
+        gain_mode_string = "slowattack";
+    } else if (return_mode == BLADERF_GAIN_HYBRID_AGC) {
+        gain_mode_string = "hybrid";
+    }
+
+    SoapySDR::logf(SOAPY_SDR_INFO, "setGainMode(%s, %d, %d), actual = %s", direction==SOAPY_SDR_RX?"Rx":"Tx", int(channel), automatic, gain_mode_string.c_str());
 }
 
 bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t channel) const
