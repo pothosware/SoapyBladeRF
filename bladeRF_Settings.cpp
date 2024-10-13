@@ -1526,9 +1526,9 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
     }
     else if (key == "biastee_tx")
     {
-        if (value == "true") {
+        if (value == "true" || value == "false") {
             // --> Valid setting has arrived
-            int ret = bladerf_set_bias_tee(_dev, BLADERF_CHANNEL_TX(0), true);
+            int ret = bladerf_set_bias_tee(_dev, BLADERF_CHANNEL_TX(0), value == "true");
             if (ret != 0)
             {
                 SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_bias_tee(BLADERF_CHANNEL_TX(0), %s) returned %s",
@@ -1540,9 +1540,9 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
     }
     else if (key == "biastee_rx")
     {
-        if (value == "true") {
+        if (value == "true" || value == "false") {
             // --> Valid setting has arrived
-            int ret = bladerf_set_bias_tee(_dev, BLADERF_CHANNEL_RX(0), true);
+            int ret = bladerf_set_bias_tee(_dev, BLADERF_CHANNEL_RX(0), value == "true");
             if (ret != 0)
             {
                 SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_bias_tee(BLADERF_CHANNEL_RX(0), %s) returned %s",
