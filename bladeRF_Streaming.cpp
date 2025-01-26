@@ -105,7 +105,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
 
     //check the channel configuration
     bladerf_channel_layout layout;
-    if (channels.size() == 1 and channels.at(0) == 0)
+    if (channels.size() == 1 and (channels.at(0) == 0 or channels.at(0) == 1))
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X1:BLADERF_TX_X1;
         if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11_META;
