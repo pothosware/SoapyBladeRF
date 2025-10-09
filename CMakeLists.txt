@@ -1,7 +1,7 @@
 ########################################################################
 # Build Soapy SDR support module for blade RF
 ########################################################################
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.5.0)
 project(SoapyBladeRF CXX)
 
 find_package(SoapySDR "0.4" NO_MODULE)
