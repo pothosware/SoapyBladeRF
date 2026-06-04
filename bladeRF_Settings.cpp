@@ -812,13 +812,13 @@ void bladeRF_SoapySDR::setClockSource(const std::string &source)
     int ret;
 
     if (source == "clk_in") {
-        sel = BLADERF_CLOCK_SELECT_EXTERNAL;
+        sel = CLOCK_SELECT_EXTERNAL;
         pll_enable = false;
     } else if (source == "ref_in") {
-        sel = BLADERF_CLOCK_SELECT_ONBOARD;
+        sel = CLOCK_SELECT_ONBOARD;
         pll_enable = true;
     } else { // default to "internal"
-        sel = BLADERF_CLOCK_SELECT_ONBOARD;
+        sel = CLOCK_SELECT_ONBOARD;
         pll_enable = false;
     }
 
@@ -850,7 +850,7 @@ std::string bladeRF_SoapySDR::getClockSource(void) const
         throw std::runtime_error("getClockSource() " + _err2str(ret));
     }
 
-    if (sel == BLADERF_CLOCK_SELECT_EXTERNAL) return "clk_in";
+    if (sel == CLOCK_SELECT_EXTERNAL) return "clk_in";
 
     ret = bladerf_get_pll_enable(_dev, &pll_enabled);
     if (ret != 0)
@@ -1301,7 +1301,7 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
                 SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_clock_select() returned %s", _err2str(ret).c_str());
                 return "";
             }
-            return (sel == BLADERF_CLOCK_SELECT_EXTERNAL) ? "external" : "onboard";
+            return (sel == CLOCK_SELECT_EXTERNAL) ? "external" : "onboard";
         } else if (key == "clock_out") {
             bool enabled(false);
             const int ret = bladerf_get_clock_output(_dev, &enabled);
@@ -1632,9 +1632,9 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
     else if (_isBladeRF2 && key == "clock_sel")
     {
         // Default to internal clock
-        bladerf_clock_select sel = BLADERF_CLOCK_SELECT_ONBOARD;
+        bladerf_clock_select sel = CLOCK_SELECT_ONBOARD;
         if (value == "external")
-            sel = BLADERF_CLOCK_SELECT_EXTERNAL;
+            sel = CLOCK_SELECT_EXTERNAL;
 
         int ret = bladerf_set_clock_select(_dev, sel);
         if (ret != 0)
