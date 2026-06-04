@@ -796,7 +796,10 @@ std::vector<std::string> bladeRF_SoapySDR::listClockSources(void) const
 {
     std::vector<std::string> clocks;
     clocks.push_back("internal");
-    if (_isBladeRF2) clocks.push_back("ref_in");
+    if (_isBladeRF2) {
+        clocks.push_back("ref_in");
+        clocks.push_back("clk_in");
+    }
     return clocks;
 }
 
@@ -804,9 +807,29 @@ void bladeRF_SoapySDR::setClockSource(const std::string &source)
 {
     if (! _isBladeRF2) return;
 
-    bool enable = (source == "ref_in");
-    int ret = bladerf_set_pll_enable(_dev, enable);
+    bladerf_clock_select sel;
+    bool pll_enable;
+    int ret;
 
+    if (source == "clk_in") {
+        sel = BLADERF_CLOCK_SELECT_EXTERNAL;
+        pll_enable = false;
+    } else if (source == "ref_in") {
+        sel = BLADERF_CLOCK_SELECT_ONBOARD;
+        pll_enable = true;
+    } else { // default to "internal"
+        sel = BLADERF_CLOCK_SELECT_ONBOARD;
+        pll_enable = false;
+    }
+
+    ret = bladerf_set_clock_select(_dev, sel);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_clock_select() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("setClockSource() " + _err2str(ret));
+    }
+
+    ret = bladerf_set_pll_enable(_dev, pll_enable);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_pll_enable() returned %s", _err2str(ret).c_str());
@@ -818,17 +841,25 @@ std::string bladeRF_SoapySDR::getClockSource(void) const
 {
     if (! _isBladeRF2) return "internal";
 
-    bool enabled(false);
-    int ret = bladerf_get_pll_enable(_dev, &enabled);
+    bladerf_clock_select sel;
+    bool pll_enabled(false);
+    int ret = bladerf_get_clock_select(_dev, &sel);
+    if (ret != 0)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_clock_select() returned %s", _err2str(ret).c_str());
+        throw std::runtime_error("getClockSource() " + _err2str(ret));
+    }
 
+    if (sel == BLADERF_CLOCK_SELECT_EXTERNAL) return "clk_in";
+
+    ret = bladerf_get_pll_enable(_dev, &pll_enabled);
     if (ret != 0)
     {
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_pll_enable() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getClockSource() " + _err2str(ret));
     }
 
-    if (enabled) return "ref_in";
-    else return "internal";
+    return pll_enabled ? "ref_in" : "internal";
 }
 
 
@@ -1199,6 +1230,33 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
 
     setArgs.push_back(biasTeeRx);
 
+    if (_isBladeRF2)
+    {
+        SoapySDR::ArgInfo clockSelArg;
+        clockSelArg.key = "clock_sel";
+        clockSelArg.value = "onboard";
+        clockSelArg.name = "Clock select (L2)";
+        clockSelArg.description = "Sample-clock mux: onboard VCTCXO or external CLKIN (J93). Use setClockSource() for the full clk_in/ref_in/internal API; this key is for diagnostics.";
+        clockSelArg.type = SoapySDR::ArgInfo::STRING;
+        clockSelArg.options.push_back("onboard");
+        clockSelArg.optionNames.push_back("Onboard VCTCXO");
+        clockSelArg.options.push_back("external");
+        clockSelArg.optionNames.push_back("External CLKIN (J93)");
+        setArgs.push_back(clockSelArg);
+
+        SoapySDR::ArgInfo clockOutArg;
+        clockOutArg.key = "clock_out";
+        clockOutArg.value = "false";
+        clockOutArg.name = "Clock output (CLKOUT J92)";
+        clockOutArg.description = "Drive 38.4 MHz sample clock to CLKOUT (J92) for daisy-chaining to a slave board CLKIN (J93).";
+        clockOutArg.type = SoapySDR::ArgInfo::BOOL;
+        clockOutArg.options.push_back("true");
+        clockOutArg.optionNames.push_back("Enabled");
+        clockOutArg.options.push_back("false");
+        clockOutArg.optionNames.push_back("Disabled");
+        setArgs.push_back(clockOutArg);
+    }
+
     return setArgs;
 }
 
@@ -1234,6 +1292,25 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         return "false";
     } else if (key == "biastee_rx") {
         return "false";
+    } else if (_isBladeRF2) {
+        // v2 specific options
+        if (key == "clock_sel") {
+            bladerf_clock_select sel;
+            const int ret = bladerf_get_clock_select(_dev, &sel);
+            if (ret != 0) {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_clock_select() returned %s", _err2str(ret).c_str());
+                return "";
+            }
+            return (sel == BLADERF_CLOCK_SELECT_EXTERNAL) ? "external" : "onboard";
+        } else if (key == "clock_out") {
+            bool enabled(false);
+            const int ret = bladerf_get_clock_output(_dev, &enabled);
+            if (ret != 0) {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_clock_output() returned %s", _err2str(ret).c_str());
+                return "";
+            }
+            return enabled ? "true" : "false";
+        }
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
@@ -1546,6 +1623,35 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
             if (ret != 0)
             {
                 SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_bias_tee(BLADERF_CHANNEL_RX(0), %s) returned %s",
+                               value.c_str(),
+                               _err2str(ret).c_str());
+                throw std::runtime_error("writeSetting() " + _err2str(ret));
+            }
+        }
+    }
+    else if (_isBladeRF2 && key == "clock_sel")
+    {
+        // Default to internal clock
+        bladerf_clock_select sel = BLADERF_CLOCK_SELECT_ONBOARD;
+        if (value == "external")
+            sel = BLADERF_CLOCK_SELECT_EXTERNAL;
+
+        int ret = bladerf_set_clock_select(_dev, sel);
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_clock_select(%s) returned %s",
+                           value.c_str(),
+                           _err2str(ret).c_str());
+            throw std::runtime_error("writeSetting() " + _err2str(ret));
+        }
+    }
+    else if (_isBladeRF2 && key == "clock_out")
+    {
+        if (value == "true" || value == "false") {
+            int ret = bladerf_set_clock_output(_dev, value == "true");
+            if (ret != 0)
+            {
+                SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_clock_output(%s) returned %s",
                                value.c_str(),
                                _err2str(ret).c_str());
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
