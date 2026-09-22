@@ -10,18 +10,15 @@ if (NOT SoapySDR_FOUND)
 endif ()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-find_package(LibbladeRF)
+find_package(LibBLADERF REQUIRED)
 
-if (NOT LIBBLADERF_FOUND)
-    message(FATAL_ERROR "Blade RF development files not found...")
-endif ()
-message(STATUS "LIBBLADERF_INCLUDE_DIRS - ${LIBBLADERF_INCLUDE_DIRS}")
-message(STATUS "LIBBLADERF_LIBRARIES - ${LIBBLADERF_LIBRARIES}")
+message(STATUS "LibBLADERF_INCLUDE_DIRS - ${LibBLADERF_INCLUDE_DIRS}")
+message(STATUS "LibBLADERF_LIBRARIES - ${LibBLADERF_LIBRARIES}")
 
 set(CMAKE_CXX_STANDARD 11)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${LIBBLADERF_INCLUDE_DIRS})
+include_directories(${LibBLADERF_INCLUDE_DIRS})
 
 if(CMAKE_COMPILER_IS_GNUCXX)
 
@@ -37,7 +34,7 @@ SOAPY_SDR_MODULE_UTIL(
         bladeRF_Settings.cpp
         bladeRF_Streaming.cpp
     LIBRARIES
-        ${LIBBLADERF_LIBRARIES}
+        ${LibBLADERF_LIBRARIES}
 )
 
 ########################################################################
