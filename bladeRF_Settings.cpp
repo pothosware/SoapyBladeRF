@@ -1231,9 +1231,25 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
     } else if (key == "load_fpga") {
         return "";
     } else if (key == "biastee_tx") {
-        return "false";
+      bool enabled;
+      int ret = bladerf_get_bias_tee(_dev, BLADERF_CHANNEL_TX(0), &enabled);
+      if (ret != 0)
+      {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_bias_tee(BLADERF_CHANNEL_TX(0)) returned %s",
+                       _err2str(ret).c_str());
+        throw std::runtime_error("readSetting() " + _err2str(ret));
+      }
+      return enabled ? "true" : "false";
     } else if (key == "biastee_rx") {
-        return "false";
+      bool enabled;
+      int ret = bladerf_get_bias_tee(_dev, BLADERF_CHANNEL_RX(0), &enabled);
+      if (ret != 0)
+      {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_bias_tee(BLADERF_CHANNEL_RX(0)) returned %s",
+                       _err2str(ret).c_str());
+        throw std::runtime_error("readSetting() " + _err2str(ret));
+      }
+      return enabled ? "true" : "false";
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
