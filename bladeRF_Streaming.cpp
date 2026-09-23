@@ -75,14 +75,14 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_
     streamArgs.push_back(xfersArg);
 
     SoapySDR::ArgInfo metaArg;
-    xfersArg.key = "meta";
-    xfersArg.value = "auto";
-    xfersArg.name = "Meta mode";
-    xfersArg.description = "Timestamp and burst streaming mode.\n"
+    metaArg.key = "meta";
+    metaArg.value = "auto";
+    metaArg.name = "Meta mode";
+    metaArg.description = "Timestamp and burst streaming mode.\n"
         "Automatic: meta in single channel mode, meta off in dual channel mode";
-    xfersArg.type = SoapySDR::ArgInfo::STRING;
-    xfersArg.options = {"auto", "meta", "normal"};
-    xfersArg.optionNames = {"Automatic", "Metadata Streams", "Normal Streams"};
+    metaArg.type = SoapySDR::ArgInfo::STRING;
+    metaArg.options = {"auto", "meta", "normal"};
+    metaArg.optionNames = {"Automatic", "Metadata Streams", "Normal Streams"};
     streamArgs.push_back(metaArg);
 
     return streamArgs;
