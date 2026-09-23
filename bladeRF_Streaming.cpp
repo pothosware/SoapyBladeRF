@@ -74,16 +74,15 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getStreamArgsInfo(const int, const size_
     xfersArg.range = SoapySDR::Range(0, 32);
     streamArgs.push_back(xfersArg);
 
-    SoapySDR::ArgInfo metaArg;
-    xfersArg.key = "meta";
-    xfersArg.value = "auto";
-    xfersArg.name = "Meta mode";
-    xfersArg.description = "Timestamp and burst streaming mode.\n"
-        "Automatic: meta in single channel mode, meta off in dual channel mode";
-    xfersArg.type = SoapySDR::ArgInfo::STRING;
-    xfersArg.options = {"auto", "meta", "normal"};
-    xfersArg.optionNames = {"Automatic", "Metadata Streams", "Normal Streams"};
-    streamArgs.push_back(metaArg);
+    SoapySDR::ArgInfo formatArg;
+    formatArg.key = "format";
+    formatArg.value = "sc16_meta";
+    formatArg.name = "Sample Format";
+    formatArg.description = "Sample format (sc16, sc16_meta, sc8, sc8_meta, sc16_packed)";
+    formatArg.type = SoapySDR::ArgInfo::STRING;
+    formatArg.options = {"sc16", "sc16_meta", "sc8", "sc8_meta", "sc16_packed"};
+    formatArg.optionNames = {"16-bit", "16-bit with Metadata", "8-bit", "8-bit with Metadata", "Packed 16-bit"};
+    streamArgs.push_back(formatArg);
 
     return streamArgs;
 }
@@ -97,28 +96,41 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     auto channels = channels_;
     if (channels.empty()) channels.push_back(0);
 
-    //meta mode, automatically on in single channel mode
-    auto metaMode = (args.count("meta") == 0)? "auto" : args.at("meta");
-    bladerf_format sync_format = BLADERF_FORMAT_SC16_Q11;
-    if (metaMode == "meta") sync_format = BLADERF_FORMAT_SC16_Q11_META;
-    if (metaMode == "normal") sync_format = BLADERF_FORMAT_SC16_Q11;
+    auto sampleFormat = (args.count("format") == 0)? "sc16_meta" : args.at("format");
+
+    if (sampleFormat == "sc16") {
+        _sample_format = BLADERF_FORMAT_SC16_Q11;
+    } else if (sampleFormat == "sc16_meta") {
+        _sample_format = BLADERF_FORMAT_SC16_Q11_META;
+    } else if (sampleFormat == "sc8") {
+        _sample_format = BLADERF_FORMAT_SC8_Q7;
+    } else if (sampleFormat == "sc8_meta") {
+        _sample_format = BLADERF_FORMAT_SC8_Q7_META;
+    } else if (sampleFormat == "sc16_packed") {
+        _sample_format = BLADERF_FORMAT_SC16_Q11_PACKED;
+    } else {
+        std::stringstream err;
+        err << "Invalid sample format: '" << sampleFormat << "'\n"
+            << "Valid formats: [sc16, sc16_meta, sc8, sc8_meta, sc16_packed]";
+        throw std::runtime_error(err.str());
+    }
 
     //check the channel configuration
     bladerf_channel_layout layout;
     if (channels.size() == 1 and (channels.at(0) == 0 or channels.at(0) == 1))
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X1:BLADERF_TX_X1;
-        if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11_META;
     }
     else if (channels.size() == 2 and channels.at(0) == 0 and channels.at(1) == 1)
     {
         layout = (direction == SOAPY_SDR_RX)?BLADERF_RX_X2:BLADERF_TX_X2;
-        if (metaMode == "auto") sync_format = BLADERF_FORMAT_SC16_Q11;
     }
     else
     {
         throw std::runtime_error("setupStream invalid channel selection");
     }
+
+    SoapySDR::logf(SOAPY_SDR_INFO, "Sample format: %s", bladerf_format_to_string(_sample_format));
 
     //check the format
     if (format == SOAPY_SDR_CF32) {}
@@ -145,7 +157,7 @@ SoapySDR::Stream *bladeRF_SoapySDR::setupStream(
     int ret = bladerf_sync_config(
         _dev,
         layout,
-        sync_format,
+        _sample_format,
         numBuffs,
         bufSize,
         numXfers,
@@ -353,6 +365,8 @@ int bladeRF_SoapySDR::readStream(
         for (size_t i = 0; i < 2 * numElems; i++)
         {
             output[i] = float(_rxConvBuff[i])/2048;
+            if (_sample_format == BLADERF_FORMAT_SC8_Q7 || _sample_format == BLADERF_FORMAT_SC8_Q7_META)
+                output[i] = float(((int8_t*)(_rxConvBuff))[i])/128;
         }
     }
     else if (not _rxFloats and _rxChans.size() == 2)
@@ -361,10 +375,17 @@ int bladeRF_SoapySDR::readStream(
         int16_t *output1 = (int16_t *)buffs[1];
         for (size_t i = 0; i < 4 * numElems;)
         {
-            *(output0++) = _rxConvBuff[i++];
-            *(output0++) = _rxConvBuff[i++];
-            *(output1++) = _rxConvBuff[i++];
-            *(output1++) = _rxConvBuff[i++];
+            if (_sample_format == BLADERF_FORMAT_SC8_Q7 || _sample_format == BLADERF_FORMAT_SC8_Q7_META) {
+                *(output0++) = ((int8_t*)(_rxConvBuff))[i++];
+                *(output0++) = ((int8_t*)(_rxConvBuff))[i++];
+                *(output1++) = ((int8_t*)(_rxConvBuff))[i++];
+                *(output1++) = ((int8_t*)(_rxConvBuff))[i++];
+            } else {
+                *(output0++) = _rxConvBuff[i++];
+                *(output0++) = _rxConvBuff[i++];
+                *(output1++) = _rxConvBuff[i++];
+                *(output1++) = _rxConvBuff[i++];
+            }
         }
     }
     else if (_rxFloats and _rxChans.size() == 2)
@@ -373,10 +394,17 @@ int bladeRF_SoapySDR::readStream(
         float *output1 = (float *)buffs[1];
         for (size_t i = 0; i < 4 * numElems;)
         {
-            *(output0++) = float(_rxConvBuff[i++])/2048;
-            *(output0++) = float(_rxConvBuff[i++])/2048;
-            *(output1++) = float(_rxConvBuff[i++])/2048;
-            *(output1++) = float(_rxConvBuff[i++])/2048;
+            if (_sample_format == BLADERF_FORMAT_SC8_Q7 || _sample_format == BLADERF_FORMAT_SC8_Q7_META) {
+                *(output0++) = float(((int8_t*)(_rxConvBuff))[i++])/128;
+                *(output0++) = float(((int8_t*)(_rxConvBuff))[i++])/128;
+                *(output1++) = float(((int8_t*)(_rxConvBuff))[i++])/128;
+                *(output1++) = float(((int8_t*)(_rxConvBuff))[i++])/128;
+            } else {
+                *(output0++) = float(_rxConvBuff[i++])/2048;
+                *(output0++) = float(_rxConvBuff[i++])/2048;
+                *(output1++) = float(_rxConvBuff[i++])/2048;
+                *(output1++) = float(_rxConvBuff[i++])/2048;
+            }
         }
     }
 

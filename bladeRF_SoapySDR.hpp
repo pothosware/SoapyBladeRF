@@ -379,6 +379,7 @@ private:
     std::string _xb200Mode;
     std::string _samplingMode;
     std::string _loopbackMode;
+    bladerf_format _sample_format;
 
     bladerf *_dev;
 
