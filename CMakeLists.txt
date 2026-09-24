@@ -6,12 +6,10 @@ project(SoapyBladeRF CXX)
 
 find_package(SoapySDR "0.4.0" NO_MODULE REQUIRED)
 
-if (NOT SOAPYSDR_ROOT)
-    get_filename_component(SOAPYSDR_ROOT "${SoapySDR_INCLUDE_DIRS}/.." ABSOLUTE)
-endif()
-message(STATUS "SoapySDR root directory: ${SOAPYSDR_ROOT}")
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE ${SOAPYSDR_ROOT})
+get_filename_component(_SoapySDR_ROOT "${SoapySDR_INCLUDE_DIRS}/.." ABSOLUTE)
+message(STATUS "SoapySDR root directory: ${_SoapySDR_ROOT}")
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND NOT "${_SoapySDR_ROOT}" STREQUAL "/usr")
+    set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE ${_SoapySDR_ROOT})
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
