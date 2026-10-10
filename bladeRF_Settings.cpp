@@ -358,7 +358,7 @@ bool bladeRF_SoapySDR::getGainMode(const int direction, const size_t channel) co
         SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_gain_mode() returned %s", _err2str(ret).c_str());
         throw std::runtime_error("getGainMode() " + _err2str(ret));
     }
-    return gain_mode == BLADERF_GAIN_AUTOMATIC;
+    return gain_mode != BLADERF_GAIN_MANUAL;
 }
 
 std::vector<std::string> bladeRF_SoapySDR::listGains(const int direction, const size_t channel) const
