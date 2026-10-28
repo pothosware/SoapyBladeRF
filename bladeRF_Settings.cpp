@@ -25,8 +25,70 @@
 #include <stdexcept>
 #include <cstdio>
 #include <cmath>
+#include <utility> //pair
+#include <vector>
 
 //! convert bladerf range to a soapysdr range
+// The AD9361 FIR modes libbladeRF takes for bladerf_set_rfic_rx_fir and bladerf_set_rfic_tx_fir,
+// by the names the rx_fir and tx_fir settings use. CUSTOM is left out: libbladeRF does not use it.
+static const std::vector<std::pair<std::string, bladerf_rfic_rxfir>> rxFirModes{
+    {"bypass", BLADERF_RFIC_RXFIR_BYPASS},
+    {"dec1", BLADERF_RFIC_RXFIR_DEC1},
+    {"dec2", BLADERF_RFIC_RXFIR_DEC2},
+    {"dec4", BLADERF_RFIC_RXFIR_DEC4},
+};
+static const std::vector<std::pair<std::string, bladerf_rfic_txfir>> txFirModes{
+    {"bypass", BLADERF_RFIC_TXFIR_BYPASS},
+    {"int1", BLADERF_RFIC_TXFIR_INT1},
+    {"int2", BLADERF_RFIC_TXFIR_INT2},
+    {"int4", BLADERF_RFIC_TXFIR_INT4},
+};
+
+// The setting description for one FIR direction: its modes as options, `def` the default.
+template <typename Mode>
+static SoapySDR::ArgInfo firArgInfo(const std::string &key, const std::string &def, const std::string &name,
+                                    const std::vector<std::pair<std::string, Mode>> &modes)
+{
+    SoapySDR::ArgInfo info;
+    info.key = key;
+    info.value = def;
+    info.name = name;
+    info.description = name + " (bladeRF 2.0 only). libbladeRF sets dec4/int4 itself below ~521 ksps, "
+        "and puts back its defaults (dec1, bypass) when the rate rises above that again.";
+    info.type = SoapySDR::ArgInfo::STRING;
+    for (const auto &mode : modes)
+    {
+        info.options.push_back(mode.first);
+        info.optionNames.push_back(mode.first);
+    }
+    return info;
+}
+
+// The name of `mode` in `modes`, or "unknown" for a mode outside the table (CUSTOM).
+template <typename Mode>
+static std::string firModeName(const std::vector<std::pair<std::string, Mode>> &modes, const Mode mode)
+{
+    for (const auto &entry : modes)
+    {
+        if (entry.second == mode) return entry.first;
+    }
+    return "unknown";
+}
+
+// The mode named `value` in `modes`; throws std::invalid_argument for any other name.
+template <typename Mode>
+static Mode firModeOf(const std::string &key, const std::vector<std::pair<std::string, Mode>> &modes,
+                      const std::string &value)
+{
+    std::string names;
+    for (const auto &entry : modes)
+    {
+        if (entry.first == value) return entry.second;
+        names += (names.empty() ? "" : ", ") + entry.first;
+    }
+    throw std::invalid_argument("writeSetting(" + key + ", " + value + ") expects one of " + names);
+}
+
 static SoapySDR::Range toRange(const bladerf_range* range)
 {
     return SoapySDR::Range(range->min*range->scale, range->max*range->scale, range->step*range->scale);
@@ -1209,6 +1271,10 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
 
     setArgs.push_back(trimDac);
 
+    // AD9361 FIR filters
+    setArgs.push_back(firArgInfo("rx_fir", "dec1", "RX FIR filter", rxFirModes));
+    setArgs.push_back(firArgInfo("tx_fir", "bypass", "TX FIR filter", txFirModes));
+
     return setArgs;
 }
 
@@ -1255,6 +1321,24 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         char hex[8];
         std::snprintf(hex, sizeof(hex), "0x%04x", trim);
         return hex;
+    } else if (key == "rx_fir") {
+        bladerf_rfic_rxfir fir = BLADERF_RFIC_RXFIR_BYPASS;
+        const int ret = bladerf_get_rfic_rx_fir(_dev, &fir);
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_rfic_rx_fir() returned %s", _err2str(ret).c_str());
+            throw std::runtime_error("readSetting() " + _err2str(ret));
+        }
+        return firModeName(rxFirModes, fir);
+    } else if (key == "tx_fir") {
+        bladerf_rfic_txfir fir = BLADERF_RFIC_TXFIR_BYPASS;
+        const int ret = bladerf_get_rfic_tx_fir(_dev, &fir);
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_get_rfic_tx_fir() returned %s", _err2str(ret).c_str());
+            throw std::runtime_error("readSetting() " + _err2str(ret));
+        }
+        return firModeName(txFirModes, fir);
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
@@ -1596,6 +1680,30 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
         if (ret != 0)
         {
             SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_trim_dac_write(%s) returned %s",
+                           value.c_str(),
+                           _err2str(ret).c_str());
+            throw std::runtime_error("writeSetting() " + _err2str(ret));
+        }
+    }
+    else if (key == "rx_fir")
+    {
+        // libbladeRF refuses anything but dec4 while the rate is below ~521 ksps.
+        const int ret = bladerf_set_rfic_rx_fir(_dev, firModeOf(key, rxFirModes, value));
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_rfic_rx_fir(%s) returned %s",
+                           value.c_str(),
+                           _err2str(ret).c_str());
+            throw std::runtime_error("writeSetting() " + _err2str(ret));
+        }
+    }
+    else if (key == "tx_fir")
+    {
+        // libbladeRF refuses anything but int4 while the rate is below ~521 ksps.
+        const int ret = bladerf_set_rfic_tx_fir(_dev, firModeOf(key, txFirModes, value));
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_set_rfic_tx_fir(%s) returned %s",
                            value.c_str(),
                            _err2str(ret).c_str());
             throw std::runtime_error("writeSetting() " + _err2str(ret));
