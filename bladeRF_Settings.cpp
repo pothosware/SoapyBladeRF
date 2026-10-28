@@ -1199,6 +1199,16 @@ SoapySDR::ArgInfoList bladeRF_SoapySDR::getSettingInfo(void) const
 
     setArgs.push_back(biasTeeRx);
 
+    // VCTCXO trim DAC
+    SoapySDR::ArgInfo trimDac;
+    trimDac.key = "trim_dac";
+    trimDac.value = "";
+    trimDac.name = "VCTCXO trim DAC";
+    trimDac.description = "Reference oscillator trim DAC value, as hex (0x1d33) or decimal (7475)";
+    trimDac.type = SoapySDR::ArgInfo::STRING;
+
+    setArgs.push_back(trimDac);
+
     return setArgs;
 }
 
@@ -1234,6 +1244,17 @@ std::string bladeRF_SoapySDR::readSetting(const std::string &key) const
         return "false";
     } else if (key == "biastee_rx") {
         return "false";
+    } else if (key == "trim_dac") {
+        uint16_t trim = 0;
+        const int ret = bladerf_trim_dac_read(_dev, &trim);
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_trim_dac_read() returned %s", _err2str(ret).c_str());
+            throw std::runtime_error("readSetting() " + _err2str(ret));
+        }
+        char hex[8];
+        std::snprintf(hex, sizeof(hex), "0x%04x", trim);
+        return hex;
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
@@ -1550,6 +1571,34 @@ void bladeRF_SoapySDR::writeSetting(const std::string &key, const std::string &v
                                _err2str(ret).c_str());
                 throw std::runtime_error("writeSetting() " + _err2str(ret));
             }
+        }
+    }
+    else if (key == "trim_dac")
+    {
+        // Hex with a 0x prefix, otherwise decimal, so a leading zero never reads as octal.
+        const bool isHex = value.size() > 2 and value[0] == '0' and (value[1] == 'x' or value[1] == 'X');
+        const std::string digits = isHex ? value.substr(2) : value;
+        unsigned long trim = 0;
+        size_t used = 0;
+        try
+        {
+            trim = std::stoul(digits, &used, isHex ? 16 : 10);
+        }
+        catch (const std::exception &)
+        {
+            used = 0;
+        }
+        if (digits.empty() or used != digits.size() or trim > 0xffff)
+        {
+            throw std::invalid_argument("writeSetting(trim_dac, " + value + ") expects 0 to 0xffff");
+        }
+        const int ret = bladerf_trim_dac_write(_dev, static_cast<uint16_t>(trim));
+        if (ret != 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "bladerf_trim_dac_write(%s) returned %s",
+                           value.c_str(),
+                           _err2str(ret).c_str());
+            throw std::runtime_error("writeSetting() " + _err2str(ret));
         }
     }
     else
